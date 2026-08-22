@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemies/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "large_goblin"
+display_name = "Large Goblin"
+health = 60
+armour = 2
+move_steps_per_turn = 1
+move_period = 2
+is_boss = false

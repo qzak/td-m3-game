@@ -10,6 +10,7 @@ var path_cells: Array[Vector2i] = []
 var path_cell_set: Dictionary = {}  # Vector2i -> true, fast membership check
 var buildable_cells: Dictionary = {}  # Vector2i -> true
 var occupied_cells: Dictionary = {}  # Vector2i -> TDAdventurer
+var reserved_cells: Dictionary = {}  # Vector2i -> true, fixed Tower cells; never player-buildable
 
 var preview_active: bool = false
 var preview_center: Vector2i = Vector2i.ZERO
@@ -68,7 +69,12 @@ func is_in_bounds(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.x < grid_width and cell.y >= 0 and cell.y < grid_height
 
 func is_buildable(cell: Vector2i) -> bool:
-	return buildable_cells.has(cell) and not occupied_cells.has(cell)
+	return buildable_cells.has(cell) and not occupied_cells.has(cell) and not reserved_cells.has(cell)
+
+## Marks a cell as permanently off-limits to player placement (used by fixed Towers).
+func reserve_cell(cell: Vector2i) -> void:
+	reserved_cells[cell] = true
+	queue_redraw()
 
 ## Shows which path cells an adventurer with the given range could hit from `center`.
 func set_range_preview(center: Vector2i, range_min: int, range_max: int) -> void:
@@ -112,6 +118,11 @@ func _draw() -> void:
 		var castle_rect := Rect2(castle_cell.x * cell_size, castle_cell.y * cell_size, cell_size, cell_size)
 		draw_rect(castle_rect, Color(0.35, 0.2, 0.15), true)
 		draw_rect(castle_rect, Color(0.9, 0.75, 0.3), false, 3.0)
+
+	for cell: Vector2i in reserved_cells:
+		var rect := Rect2(cell.x * cell_size, cell.y * cell_size, cell_size, cell_size)
+		draw_rect(rect, Color(0.15, 0.25, 0.45), true)
+		draw_rect(rect, Color(0.4, 0.6, 0.9), false, 3.0)
 
 	if preview_active:
 		# Manhattan distance gives a diamond-shaped range instead of a square.

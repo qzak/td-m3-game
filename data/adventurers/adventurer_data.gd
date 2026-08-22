@@ -17,5 +17,7 @@ enum AdventurerType { PHYSICAL_MELEE, PHYSICAL_RANGED, MAGIC }
 @export var attack_pool: int = 100
 @export var attack_regen: int = 25
 
+@export var recruit_cost: int = 100
+
 @export var spell_ids: Array[String] = []  # only used when type == MAGIC
 @export var sprite: Texture2D

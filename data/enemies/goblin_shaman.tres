@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemies/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "goblin_shaman"
+display_name = "Goblin Shaman"
+health = 18
+armour = 0
+move_steps_per_turn = 1
+is_boss = false
+can_stun = true
+stun_duration_steps = 2
+stun_range = 1

@@ -3,6 +3,14 @@ extends Node
 
 const SAVE_PATH := "user://savegame.json"
 
+func _ready() -> void:
+	EventBus.currency_changed.connect(func(_v): save_game())
+	EventBus.materials_changed.connect(func(_id, _v): save_game())
+	EventBus.adventurer_recruited.connect(func(_id): save_game())
+	EventBus.building_upgraded.connect(func(_id, _lvl): save_game())
+	EventBus.day_won.connect(func(_idx): save_game())
+	EventBus.day_lost.connect(func(_idx): save_game())
+
 func save_game() -> void:
 	var data := {
 		"currency": GameState.currency,

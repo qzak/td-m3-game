@@ -1,19 +1,15 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/tower_defense/battle_controller.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/tower_defense/grid_map.gd" id="2"]
 [ext_resource type="Resource" path="res://data/waves/day_1.tres" id="3"]
-[ext_resource type="Resource" path="res://data/adventurers/swordsman.tres" id="4"]
-[ext_resource type="Resource" path="res://data/adventurers/archer.tres" id="5"]
-[ext_resource type="Resource" path="res://data/adventurers/mage.tres" id="6"]
+[ext_resource type="Resource" path="res://data/buildings/towers_stats.tres" id="7"]
 
 [node name="TDBattle" type="Node2D"]
 script = ExtResource("1")
 day_data = ExtResource("3")
 starting_castle_hp = 10
-swordsman_data = ExtResource("4")
-archer_data = ExtResource("5")
-mage_data = ExtResource("6")
+tower_data = ExtResource("7")
 
 [node name="GridMap" type="Node2D" parent="."]
 position = Vector2(80, 80)
@@ -51,14 +47,10 @@ text = "Selected: none"
 [node name="Controls" type="HBoxContainer" parent="UI/HUD"]
 position = Vector2(20, 620)
 
-[node name="PlaceSwordsmanButton" type="Button" parent="UI/HUD/Controls"]
-text = "Place Swordsman"
-
-[node name="PlaceArcherButton" type="Button" parent="UI/HUD/Controls"]
-text = "Place Archer"
-
-[node name="PlaceMageButton" type="Button" parent="UI/HUD/Controls"]
-text = "Place Mage"
+[node name="PlacementButtonsContainer" type="HBoxContainer" parent="UI/HUD/Controls"]
 
 [node name="StartBattleButton" type="Button" parent="UI/HUD/Controls"]
 text = "Call Wave 1"
+
+[node name="ReturnToCastleButton" type="Button" parent="UI/HUD/Controls"]
+text = "Return to Castle"

@@ -12,10 +12,10 @@ alongside code changes so it stays a reliable reference. See
 | [scripts/tower_defense/battle_controller.gd](../../scripts/tower_defense/battle_controller.gd) (`TDBattleController`) | Owns the move/attack step loop, spawning, targeting, win/lose, placement mode, HUD wiring. |
 | [scripts/tower_defense/grid_map.gd](../../scripts/tower_defense/grid_map.gd) (`TDGridMap`) | Draws the grid + path, hit-tests mouse clicks/hover into cells, draws the range-preview overlay. |
 | [scripts/tower_defense/adventurer.gd](../../scripts/tower_defense/adventurer.gd) (`TDAdventurer`) | Per-placed-unit state: attack pool charge/regen, range check. |
-| [scripts/tower_defense/enemy.gd](../../scripts/tower_defense/enemy.gd) (`TDEnemy`) | Per-enemy state: health/armour, path following. |
+| [scripts/tower_defense/enemy.gd](../../scripts/tower_defense/enemy.gd) (`TDEnemy`) | Per-enemy state: health/armour, path following, move-speed cooldown. |
 | [scenes/tower_defense/adventurer_unit.tscn](../../scenes/tower_defense/adventurer_unit.tscn) / [enemy_unit.tscn](../../scenes/tower_defense/enemy_unit.tscn) | Placeholder visuals (colored square + stat label) — no art yet. |
 | [data/adventurers/*.tres](../../data/adventurers/) | `AdventurerData` resource instances (see roster below). |
-| [data/enemies/goblin.tres](../../data/enemies/goblin.tres) | Only enemy type so far. |
+| [data/enemies/goblin.tres](../../data/enemies/goblin.tres), [large_goblin.tres](../../data/enemies/large_goblin.tres) | Enemy types (see roster below). |
 | [data/waves/day_1.tres](../../data/waves/day_1.tres) + `day1_wave*.tres` | `DayData`/`WaveData` resources defining the current Day's wave sequence (see below). |
 
 ## Grid & Path
@@ -38,10 +38,10 @@ alongside code changes so it stays a reliable reference. See
 `TDBattleController` runs a single repeating `Timer` (`step_interval`, default `0.5s`) that
 alternates:
 
-- **Move step** (`_move_step`): advances every alive enemy along the path (`TDEnemy.advance()`)
-  first (so a freshly spawned enemy doesn't jump on its own spawn step), deals 1 castle-HP
-  damage per enemy that reaches the door, processes the wave spawn queue
-  (`_process_spawn_queue`), then adds `attack_regen` to every placed adventurer's attack pool.
+- **Move step** (`_move_step`): resolves enemy movement first via `_resolve_enemy_movement()`
+  (so a freshly spawned enemy doesn't jump on its own spawn step), deals 1 castle-HP damage per
+  enemy that reaches the door, processes the wave spawn queue (`_process_spawn_queue`), then
+  adds `attack_regen` to every placed adventurer's attack pool.
 - **Attack step** (`_attack_step`): each adventurer whose pool is `>= attack_pool` picks the
   valid in-range enemy furthest along the path (closest to the castle) and attacks, looping so
   a large regen can trigger multiple attacks in one step. Damage is
@@ -51,6 +51,27 @@ Win condition: no enemies left alive and no wave left to call. Loss condition: c
 hits 0. Both stop the timer and set `battle_over`.
 
 The timer isn't running continuously for the whole Day, though — see below.
+
+## Enemy Movement & Blocking
+
+- Only one enemy may occupy a given path cell at a time. `_resolve_enemy_movement()` sorts all
+  alive enemies by `path_index` descending (closest to the castle first) and resolves them in
+  that order: each enemy calls `peek_target_cell()` to see where it would move, and is blocked
+  (`TDEnemy.apply_move(false)`) if another enemy already claimed that cell earlier in this same
+  step. Blocked enemies simply stay put and try again next move step — this is what lets a slow
+  or stationary enemy jam up everyone behind it on the single-tile-wide path.
+- **Move speed** is controlled by two `EnemyData` fields: `move_steps_per_turn` (cells covered
+  in one move, for fast enemies) and `move_period` (how many move-steps between moves, for slow
+  enemies — `2` means it only moves on every other move step). `TDEnemy.move_cooldown` tracks
+  this: `apply_move()` ticks it down and skips movement entirely while it's `> 0`, regardless of
+  blocking.
+
+## Enemy Roster (current)
+
+| Name | id | Health | Armour | Move Speed |
+|---|---|---|---|---|
+| Goblin | `goblin` | 25 | 0 | 1 cell every move step |
+| Large Goblin | `large_goblin` | 60 | 2 | 1 cell every **other** move step, and blocks the path behind it |
 
 ## Day / Wave Structure
 
@@ -77,8 +98,9 @@ The timer isn't running continuously for the whole Day, though — see below.
   call the next wave. This is deliberate — it stops adventurers from passively racking up
   attack points between waves. `_begin_wave()` resumes the timer (and resets `is_move_phase` to
   `true` so the next tick is a clean move step) if it was stopped.
-- [data/waves/day_1.tres](../../data/waves/day_1.tres) is the current sample: 3 waves of
-  goblins (5 @ 2-step spacing, 8 @ 2-step, 10 @ 1-step), `difficulty_scalar = 1.0`.
+- [data/waves/day_1.tres](../../data/waves/day_1.tres) is the current sample: goblins in
+  waves 1-3 (5 @ 2-step spacing, 8 @ 2-step, 10 @ 1-step), then a 4th wave of 3 Large Goblins
+  (4-step spacing) to demonstrate the path-blocking behavior. `difficulty_scalar = 1.0`.
 - The HUD's `WaveLabel` shows `Day X — Wave Y/Z — Enemies left to spawn: N`, driven by
   `current_wave_index` and `total_enemies_remaining_to_spawn`.
 - `EventBus.day_started/day_won/day_lost` now emit `day_data.day_index` instead of a hardcoded 0.
@@ -112,7 +134,7 @@ and can't hit anything adjacent to it.
 
 ## Known Limitations / Next Up
 
-- Only one enemy type (Goblin) exists so far — `WaveData` supports mixing types, just none to mix in yet.
+- Only two enemy types exist so far (Goblin, Large Goblin) — plenty of room for more variety.
 - No enemy abilities yet (stun, double-move) even though `EnemyData` has the fields.
 - No Towers (last-resort defense) yet.
 - Mage doesn't cast selectable spells yet — currently attacks identically to other types, just

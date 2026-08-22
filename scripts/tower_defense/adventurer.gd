@@ -5,6 +5,7 @@ class_name TDAdventurer
 var data: AdventurerData
 var cell: Vector2i
 var attack_pool_current: int = 0
+var stunned_steps_remaining: int = 0
 
 @onready var pool_label: Label = $PoolLabel
 
@@ -13,6 +14,7 @@ func setup(p_data: AdventurerData, p_cell: Vector2i, world_pos: Vector2) -> void
 	cell = p_cell
 	position = world_pos
 	attack_pool_current = 0
+	stunned_steps_remaining = 0
 	_update_label()
 
 func regen() -> void:
@@ -23,8 +25,16 @@ func consume_pool() -> void:
 	attack_pool_current -= data.attack_pool
 	_update_label()
 
+func apply_stun(steps: int) -> void:
+	stunned_steps_remaining = maxi(stunned_steps_remaining, steps)
+	_update_label()
+
+func tick_stun() -> void:
+	stunned_steps_remaining = maxi(stunned_steps_remaining - 1, 0)
+	_update_label()
+
 func can_attack() -> bool:
-	return attack_pool_current >= data.attack_pool
+	return stunned_steps_remaining <= 0 and attack_pool_current >= data.attack_pool
 
 func is_in_range(target_cell: Vector2i) -> bool:
 	# Manhattan distance gives a diamond-shaped range instead of a square.
@@ -33,4 +43,7 @@ func is_in_range(target_cell: Vector2i) -> bool:
 
 func _update_label() -> void:
 	if pool_label:
-		pool_label.text = "%d/%d" % [attack_pool_current, data.attack_pool]
+		if stunned_steps_remaining > 0:
+			pool_label.text = "STUNNED (%d)" % stunned_steps_remaining
+		else:
+			pool_label.text = "%d/%d" % [attack_pool_current, data.attack_pool]

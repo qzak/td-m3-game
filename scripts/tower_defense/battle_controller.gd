@@ -8,10 +8,10 @@ const ADVENTURER_SCENE := preload("res://scenes/tower_defense/adventurer_unit.ts
 @export var step_interval: float = 0.5
 @export var day_data: DayData
 @export var starting_castle_hp: int = 10
+@export var tower_data: TowerData
 
-@export var swordsman_data: AdventurerData
-@export var archer_data: AdventurerData
-@export var mage_data: AdventurerData
+## Fallback roster used when GameState has no active roster yet (e.g. testing this scene directly).
+@export var fallback_roster_ids: Array[String] = ["swordsman", "archer", "mage"]
 
 @onready var grid: TDGridMap = $GridMap
 @onready var units_root: Node2D = $UnitsRoot
@@ -21,9 +21,8 @@ const ADVENTURER_SCENE := preload("res://scenes/tower_defense/adventurer_unit.ts
 @onready var result_label: Label = $UI/HUD/ResultLabel
 @onready var selected_label: Label = $UI/HUD/SelectedLabel
 @onready var start_button: Button = $UI/HUD/Controls/StartBattleButton
-@onready var place_warrior_button: Button = $UI/HUD/Controls/PlaceSwordsmanButton
-@onready var place_archer_button: Button = $UI/HUD/Controls/PlaceArcherButton
-@onready var place_mage_button: Button = $UI/HUD/Controls/PlaceMageButton
+@onready var return_button: Button = $UI/HUD/Controls/ReturnToCastleButton
+@onready var placement_buttons_container: HBoxContainer = $UI/HUD/Controls/PlacementButtonsContainer
 
 var enemies: Array[TDEnemy] = []
 var adventurers: Array[TDAdventurer] = []
@@ -48,24 +47,41 @@ func _ready() -> void:
 	for wave in day_data.waves:
 		total_enemies_remaining_to_spawn += wave.count
 
-	adventurer_buttons = {
-		swordsman_data.id: place_warrior_button,
-		archer_data.id: place_archer_button,
-		mage_data.id: place_mage_button,
-	}
+	_build_placement_buttons()
 
 	grid.cell_clicked.connect(_on_grid_cell_clicked)
 	grid.cell_hovered.connect(_on_grid_cell_hovered)
 	step_timer.wait_time = step_interval
 	step_timer.timeout.connect(_on_step_timer_timeout)
 
-	place_warrior_button.pressed.connect(func(): _select_adventurer(swordsman_data))
-	place_archer_button.pressed.connect(func(): _select_adventurer(archer_data))
-	place_mage_button.pressed.connect(func(): _select_adventurer(mage_data))
 	start_button.pressed.connect(_on_start_button_pressed)
+	return_button.visible = false
+	return_button.pressed.connect(_on_return_button_pressed)
+
+	_spawn_towers()
 
 	_update_start_button_label()
 	_update_hud()
+
+## Builds one placement button per adventurer in the active roster (falls back to a default
+## trio when no roster has been chosen yet, e.g. running this scene directly for testing).
+func _build_placement_buttons() -> void:
+	var roster_ids: Array = GameState.active_roster_ids
+	if roster_ids.is_empty():
+		roster_ids = fallback_roster_ids
+
+	for def_id in roster_ids:
+		var def: AdventurerData = load("res://data/adventurers/%s.tres" % def_id)
+		if def == null:
+			continue
+		var button := Button.new()
+		button.text = "Place %s" % def.display_name
+		button.pressed.connect(_select_adventurer.bind(def))
+		placement_buttons_container.add_child(button)
+		adventurer_buttons[def.id] = button
+
+func _on_return_button_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/castle/castle.tscn")
 
 ## While a wave is actively spawning, toggles "auto-call the next wave" for when it finishes.
 ## Otherwise (no wave currently spawning), immediately starts the next wave.
@@ -83,9 +99,8 @@ func _on_start_button_pressed() -> void:
 func _begin_wave() -> void:
 	if not battle_started:
 		battle_started = true
-		place_warrior_button.disabled = true
-		place_archer_button.disabled = true
-		place_mage_button.disabled = true
+		for button in placement_buttons_container.get_children():
+			button.disabled = true
 		grid.clear_range_preview()
 		EventBus.day_started.emit(day_data.day_index)
 
@@ -153,20 +168,38 @@ func _on_step_timer_timeout() -> void:
 
 func _move_step() -> void:
 	# Move existing enemies first so a freshly spawned enemy stays on the spawn tile this step.
-	for enemy in enemies.duplicate():
-		if enemy.advance():
-			castle_hp = maxi(castle_hp - 1, 0)
-			enemies.erase(enemy)
-			enemy.queue_free()
-			EventBus.castle_hp_changed.emit(castle_hp)
+	_resolve_enemy_movement()
 
 	_process_spawn_queue()
 
 	for adventurer in adventurers:
+		adventurer.tick_stun()
 		adventurer.regen()
+
+	# Stuns apply after movement so a freshly stunned adventurer skips the upcoming attack step.
+	for enemy in enemies:
+		enemy.try_stun(adventurers)
 
 	_update_hud()
 	_check_end_conditions()
+
+## Moves enemies front-to-back (closest to the castle first) so a slower enemy (or one that's
+## resting between moves) blocks anyone behind it from advancing into its tile.
+func _resolve_enemy_movement() -> void:
+	var ordered: Array[TDEnemy] = enemies.duplicate()
+	ordered.sort_custom(func(a: TDEnemy, b: TDEnemy) -> bool: return a.path_index > b.path_index)
+
+	var claimed_cells: Dictionary = {}  # Vector2i -> true, tiles already resolved this step
+	for enemy: TDEnemy in ordered:
+		var target_cell: Vector2i = enemy.peek_target_cell()
+		var blocked := target_cell != enemy.current_cell and claimed_cells.has(target_cell)
+		if enemy.apply_move(not blocked):
+			castle_hp = maxi(castle_hp - 1, 0)
+			enemies.erase(enemy)
+			enemy.queue_free()
+			EventBus.castle_hp_changed.emit(castle_hp)
+			continue
+		claimed_cells[enemy.current_cell] = true
 
 ## Advances through day_data.waves in order, spawning one enemy at a time per wave's spacing.
 ## Only spawns while wave_active; once a wave finishes spawning, either auto-continues into
@@ -225,6 +258,33 @@ func _spawn_enemy(enemy_data: EnemyData) -> void:
 	enemy.setup(enemy_data, grid, day_data.difficulty_scalar)
 	enemies.append(enemy)
 
+## Fixed last-resort defenders flanking the castle door; never placed/removed by the player.
+func _spawn_towers() -> void:
+	if tower_data == null:
+		return
+	var door_cell: Vector2i = grid.path_cells[grid.path_cells.size() - 1]
+	var level: int = GameState.building_levels.get("towers", 1)
+	var stats := tower_data.stats_for_level(level)
+	for offset: Vector2i in [Vector2i(-1, 0), Vector2i(1, 0)]:
+		var cell := door_cell + offset
+		if not grid.is_in_bounds(cell) or grid.path_cell_set.has(cell):
+			continue
+		grid.reserve_cell(cell)
+		var tower_stats := AdventurerData.new()
+		tower_stats.id = "tower_%d_%d" % [cell.x, cell.y]
+		tower_stats.display_name = "Tower"
+		tower_stats.range_min = stats["range_min"]
+		tower_stats.range_max = stats["range_max"]
+		tower_stats.damage_min = stats["damage_min"]
+		tower_stats.damage_max = stats["damage_max"]
+		tower_stats.attack_pool = stats["attack_pool"]
+		tower_stats.attack_regen = stats["attack_regen"]
+
+		var tower: TDAdventurer = ADVENTURER_SCENE.instantiate()
+		units_root.add_child(tower)
+		tower.setup(tower_stats, cell, grid.cell_to_world(cell))
+		adventurers.append(tower)
+
 func _check_end_conditions() -> void:
 	if battle_over:
 		return
@@ -232,6 +292,7 @@ func _check_end_conditions() -> void:
 		battle_over = true
 		step_timer.stop()
 		result_label.text = "Day Failed"
+		return_button.visible = true
 		EventBus.day_lost.emit(day_data.day_index)
 		return
 
@@ -242,6 +303,7 @@ func _check_end_conditions() -> void:
 		battle_over = true
 		step_timer.stop()
 		result_label.text = "Day Cleared!"
+		return_button.visible = true
 		EventBus.day_won.emit(day_data.day_index)
 	else:
 		# Field is clear and nothing is spawning — pause so adventurers stop gaining

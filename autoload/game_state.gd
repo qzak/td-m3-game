@@ -40,3 +40,27 @@ func spend_material(material_id: String, amount: int) -> bool:
 	materials[material_id] -= amount
 	EventBus.materials_changed.emit(material_id, materials[material_id])
 	return true
+
+## Base + per-level slot count for a roster-capacity building (e.g. Quarters).
+func capacity_for(building_id: String) -> int:
+	return 2 + building_levels.get(building_id, 1)
+
+## Spends currency and adds a new owned instance of the given AdventurerData id.
+func recruit_adventurer(def_id: String) -> bool:
+	var def: AdventurerData = load("res://data/adventurers/%s.tres" % def_id)
+	if def == null or currency < def.recruit_cost:
+		return false
+	currency -= def.recruit_cost
+	EventBus.currency_changed.emit(currency)
+	owned_adventurers.append({
+		"def_id": def_id,
+		"instance_id": "%s_%d" % [def_id, Time.get_ticks_usec()],
+		"level": 1,
+		"equipped": [],
+	})
+	EventBus.adventurer_recruited.emit(def_id)
+	return true
+
+## Replaces the active TD roster, capped to the Quarters' current capacity.
+func set_active_roster(def_ids: Array) -> void:
+	active_roster_ids = def_ids.slice(0, capacity_for("quarters"))

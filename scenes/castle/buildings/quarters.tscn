@@ -1,0 +1,19 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/castle/quarters_controller.gd" id="1"]
+
+[node name="Quarters" type="Control"]
+script = ExtResource("1")
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Title" type="Label" parent="."]
+position = Vector2(20, 20)
+text = "Quarters — choose your active roster for the next Day"
+
+[node name="CapacityLabel" type="Label" parent="."]
+position = Vector2(20, 50)
+text = "Active roster: 0 / 2"
+
+[node name="RosterList" type="VBoxContainer" parent="."]
+position = Vector2(20, 80)

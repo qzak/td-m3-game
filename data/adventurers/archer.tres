@@ -14,3 +14,4 @@ range_min = 1
 range_max = 4
 attack_pool = 80
 attack_regen = 45
+recruit_cost = 120
