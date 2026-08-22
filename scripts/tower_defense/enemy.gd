@@ -10,10 +10,10 @@ var current_cell: Vector2i
 
 @onready var hp_label: Label = $HPLabel
 
-func setup(p_data: EnemyData, p_grid: TDGridMap) -> void:
+func setup(p_data: EnemyData, p_grid: TDGridMap, health_multiplier: float = 1.0) -> void:
 	data = p_data
 	grid = p_grid
-	current_health = data.health
+	current_health = int(round(data.health * health_multiplier))
 	path_index = 0
 	current_cell = grid.path_cells[0]
 	position = grid.cell_to_world(current_cell)

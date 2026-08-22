@@ -16,6 +16,7 @@ alongside code changes so it stays a reliable reference. See
 | [scenes/tower_defense/adventurer_unit.tscn](../../scenes/tower_defense/adventurer_unit.tscn) / [enemy_unit.tscn](../../scenes/tower_defense/enemy_unit.tscn) | Placeholder visuals (colored square + stat label) — no art yet. |
 | [data/adventurers/*.tres](../../data/adventurers/) | `AdventurerData` resource instances (see roster below). |
 | [data/enemies/goblin.tres](../../data/enemies/goblin.tres) | Only enemy type so far. |
+| [data/waves/day_1.tres](../../data/waves/day_1.tres) + `day1_wave*.tres` | `DayData`/`WaveData` resources defining the current Day's wave sequence (see below). |
 
 ## Grid & Path
 
@@ -37,20 +38,54 @@ alongside code changes so it stays a reliable reference. See
 `TDBattleController` runs a single repeating `Timer` (`step_interval`, default `0.5s`) that
 alternates:
 
-- **Move step** (`_move_step`): spawns the next enemy if its spawn delay has elapsed, advances
-  every alive enemy along the path (`TDEnemy.advance()`), deals 1 castle-HP damage per enemy
-  that reaches the end, then adds `attack_regen` to every placed adventurer's attack pool.
+- **Move step** (`_move_step`): advances every alive enemy along the path (`TDEnemy.advance()`)
+  first (so a freshly spawned enemy doesn't jump on its own spawn step), deals 1 castle-HP
+  damage per enemy that reaches the door, processes the wave spawn queue
+  (`_process_spawn_queue`), then adds `attack_regen` to every placed adventurer's attack pool.
 - **Attack step** (`_attack_step`): each adventurer whose pool is `>= attack_pool` picks the
   valid in-range enemy furthest along the path (closest to the castle) and attacks, looping so
   a large regen can trigger multiple attacks in one step. Damage is
   `randi_range(damage_min, damage_max) - enemy.armour` (floored at 0).
 
-Win condition: no enemies left alive and none left to spawn. Loss condition: castle HP hits 0.
-Both stop the timer and set `battle_over`.
+Win condition: no enemies left alive and no wave left to call. Loss condition: castle HP
+hits 0. Both stop the timer and set `battle_over`.
+
+The timer isn't running continuously for the whole Day, though — see below.
+
+## Day / Wave Structure
+
+- `TDBattleController.day_data` (a `DayData` resource) replaces the old hardcoded single-wave
+  fields. `DayData` holds `day_index`, an ordered `waves: Array[WaveData]`, and a
+  `difficulty_scalar` applied as an enemy health multiplier (`TDEnemy.setup(data, grid,
+  health_multiplier)`).
+- Each `WaveData` is just `enemy_data: EnemyData` + `count` + `spawn_delay_steps` — no id/string
+  lookup, it references the `EnemyData` resource directly (same pattern as adventurers).
+- **Waves are player-triggered, one at a time, via a single button that changes meaning
+  depending on state** (`start_button` / `_update_start_button_label()`):
+  - **No wave currently spawning** (`wave_active == false`): button reads `Call Wave N` — a
+    direct action. Pressing it calls `_begin_wave()`, which starts that wave's enemies spawning
+    immediately (and, on the very first press, locks adventurer placement and fires
+    `EventBus.day_started`).
+  - **A wave is actively spawning** (`wave_active == true`): button becomes a toggle, reading
+    `Auto-Call Next Wave` / `Cancel Auto-Call`. It flips `auto_call_next` and does *not* start
+    anything immediately — waves never overlap. Once the active wave finishes spawning
+    (`_process_spawn_queue()`), if `auto_call_next` was left on, `_begin_wave()` runs
+    immediately for the next wave; otherwise the button reverts to `Call Wave N` and waits for
+    a manual press.
+- **The step timer pauses whenever the field is clear and no wave is actively spawning**
+  (`_check_end_conditions()`): `step_timer.stop()` and the result label prompts the player to
+  call the next wave. This is deliberate — it stops adventurers from passively racking up
+  attack points between waves. `_begin_wave()` resumes the timer (and resets `is_move_phase` to
+  `true` so the next tick is a clean move step) if it was stopped.
+- [data/waves/day_1.tres](../../data/waves/day_1.tres) is the current sample: 3 waves of
+  goblins (5 @ 2-step spacing, 8 @ 2-step, 10 @ 1-step), `difficulty_scalar = 1.0`.
+- The HUD's `WaveLabel` shows `Day X — Wave Y/Z — Enemies left to spawn: N`, driven by
+  `current_wave_index` and `total_enemies_remaining_to_spawn`.
+- `EventBus.day_started/day_won/day_lost` now emit `day_data.day_index` instead of a hardcoded 0.
 
 ## Placement & Range Preview
 
-- Before `Start Battle` is pressed, clicking **Place Swordsman / Place Archer / Mage** sets
+- Before the first wave is called, clicking **Place Swordsman / Place Archer / Mage** sets
   `selected_adventurer_data` and updates the `SelectedLabel` HUD text.
 - While a unit type is selected, moving the mouse over the grid emits `TDGridMap.cell_hovered`,
   which the controller uses to call `grid.set_range_preview(cell, range_min, range_max)`. The
@@ -77,10 +112,11 @@ and can't hit anything adjacent to it.
 
 ## Known Limitations / Next Up
 
-- Single hardcoded wave (`enemy_count` goblins on a fixed spawn interval) — not yet using the
-  scaffolded `WaveData`/`DayData` resources.
+- Only one enemy type (Goblin) exists so far — `WaveData` supports mixing types, just none to mix in yet.
 - No enemy abilities yet (stun, double-move) even though `EnemyData` has the fields.
 - No Towers (last-resort defense) yet.
 - Mage doesn't cast selectable spells yet — currently attacks identically to other types, just
   with different stats.
 - No adventurer placement limit tied to the Castle's Quarters.
+- No new placements allowed between waves once the day has started (only before the first
+  wave) — might be worth revisiting since real breathing room exists between waves now.

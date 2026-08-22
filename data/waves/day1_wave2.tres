@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="WaveData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/waves/wave_data.gd" id="1"]
+[ext_resource type="Resource" path="res://data/enemies/goblin.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+enemy_data = ExtResource("2")
+count = 8
+spawn_delay_steps = 2
