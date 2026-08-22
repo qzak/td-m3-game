@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/adventurers/adventurer_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "swordsman"
+display_name = "The Swordsman"
+rarity = 1
+type = 0
+damage_min = 3
+damage_max = 6
+range_min = 1
+range_max = 1
+attack_pool = 100
+attack_regen = 40

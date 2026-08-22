@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/adventurers/adventurer_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "mage"
+display_name = "The Mage"
+rarity = 1
+type = 2
+damage_min = 4
+damage_max = 8
+range_min = 4
+range_max = 5
+attack_pool = 120
+attack_regen = 30

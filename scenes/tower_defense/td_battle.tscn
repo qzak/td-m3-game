@@ -1,0 +1,66 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/tower_defense/battle_controller.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/tower_defense/grid_map.gd" id="2"]
+[ext_resource type="Resource" path="res://data/enemies/goblin.tres" id="3"]
+[ext_resource type="Resource" path="res://data/adventurers/swordsman.tres" id="4"]
+[ext_resource type="Resource" path="res://data/adventurers/archer.tres" id="5"]
+[ext_resource type="Resource" path="res://data/adventurers/mage.tres" id="6"]
+
+[node name="TDBattle" type="Node2D"]
+script = ExtResource("1")
+enemy_data = ExtResource("3")
+enemy_count = 6
+spawn_interval_steps = 2
+starting_castle_hp = 10
+swordsman_data = ExtResource("4")
+archer_data = ExtResource("5")
+mage_data = ExtResource("6")
+
+[node name="GridMap" type="Node2D" parent="."]
+position = Vector2(80, 80)
+script = ExtResource("2")
+
+[node name="UnitsRoot" type="Node2D" parent="."]
+position = Vector2(80, 80)
+
+[node name="StepTimer" type="Timer" parent="."]
+wait_time = 0.5
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="HUD" type="Control" parent="UI"]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="CastleHPLabel" type="Label" parent="UI/HUD"]
+position = Vector2(20, 20)
+text = "Castle HP: 10"
+
+[node name="WaveLabel" type="Label" parent="UI/HUD"]
+position = Vector2(20, 50)
+text = "Enemies left to spawn: 6"
+
+[node name="ResultLabel" type="Label" parent="UI/HUD"]
+position = Vector2(500, 20)
+text = ""
+
+[node name="SelectedLabel" type="Label" parent="UI/HUD"]
+position = Vector2(20, 590)
+text = "Selected: none"
+
+[node name="Controls" type="HBoxContainer" parent="UI/HUD"]
+position = Vector2(20, 620)
+
+[node name="PlaceSwordsmanButton" type="Button" parent="UI/HUD/Controls"]
+text = "Place Swordsman"
+
+[node name="PlaceArcherButton" type="Button" parent="UI/HUD/Controls"]
+text = "Place Archer"
+
+[node name="PlaceMageButton" type="Button" parent="UI/HUD/Controls"]
+text = "Place Mage"
+
+[node name="StartBattleButton" type="Button" parent="UI/HUD/Controls"]
+text = "Start Battle"
