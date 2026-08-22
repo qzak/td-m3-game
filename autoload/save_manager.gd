@@ -41,8 +41,13 @@ func load_game() -> bool:
 
 	GameState.currency = parsed.get("currency", 0)
 	GameState.materials = parsed.get("materials", {})
-	GameState.owned_adventurers = parsed.get("owned_adventurers", [])
-	GameState.active_roster_ids = parsed.get("active_roster_ids", [])
+	# Keep GameState's built-in starting roster if an older save predates it (empty arrays).
+	var loaded_owned: Array = parsed.get("owned_adventurers", [])
+	if not loaded_owned.is_empty():
+		GameState.owned_adventurers = loaded_owned
+	var loaded_roster: Array = parsed.get("active_roster_ids", [])
+	if not loaded_roster.is_empty():
+		GameState.active_roster_ids = loaded_roster
 	GameState.building_levels = parsed.get("building_levels", GameState.building_levels)
 	GameState.tavern_roster_ids = parsed.get("tavern_roster_ids", [])
 	GameState.tavern_next_refresh_unix = parsed.get("tavern_next_refresh_unix", 0)

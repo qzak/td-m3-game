@@ -14,3 +14,4 @@ script = ExtResource("1")
 day_index = 1
 waves = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])
 difficulty_scalar = 1.0
+completion_reward = 150

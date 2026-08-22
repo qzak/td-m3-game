@@ -107,8 +107,10 @@ The timer isn't running continuously for the whole Day, though — see below.
 
 ## Placement & Range Preview
 
-- Before the first wave is called, clicking **Place Swordsman / Place Archer / Mage** sets
-  `selected_adventurer_data` and updates the `SelectedLabel` HUD text.
+- Before the first wave is called, clicking one of the dynamically-built **Place X** buttons (one
+  per adventurer in `GameState.active_roster_ids`, chosen in the Castle's Quarters — see
+  [docs/systems/castle.md](castle.md)) sets `selected_adventurer_data` and updates the
+  `SelectedLabel` HUD text.
 - While a unit type is selected, moving the mouse over the grid emits `TDGridMap.cell_hovered`,
   which the controller uses to call `grid.set_range_preview(cell, range_min, range_max)`. The
   grid highlights every cell within Manhattan distance `[range_min, range_max]` of the
@@ -122,23 +124,37 @@ The timer isn't running continuously for the whole Day, though — see below.
 
 ## Adventurer Roster (current)
 
-| Name | id | Type | Range | Damage | Attack Pool / Regen |
-|---|---|---|---|---|---|
-| The Swordsman | `swordsman` | Physical melee | 1–1 | 3–6 | 100 / 40 |
-| The Archer | `archer` | Physical ranged | 1–4 | 2–4 | 80 / 45 |
-| The Mage | `mage` | Magic | 4–5 | 4–8 | 120 / 30 |
+| Name | id | Type | Range | Damage | Attack Pool / Regen | Recruit Cost |
+|---|---|---|---|---|---|---|
+| The Swordsman | `swordsman` | Physical melee | 1–1 | 3–6 | 100 / 40 | 100 (starting) |
+| The Archer | `archer` | Physical ranged | 1–4 | 2–4 | 80 / 45 | 100 (starting) |
+| The Mage | `mage` | Magic | 4–5 | 4–8 | 120 / 30 | 100 (starting) |
+| The Berserker | `berserker` | Physical melee | 1–1 | 8–14 | 140 / 20 | 250 (Tavern) |
 
 Range is Manhattan distance (`|dx| + |dy|`, diamond-shaped) from the adventurer's cell to the
 enemy's current path cell — melee units can only hit true neighbors, the mage is long-range-only
-and can't hit anything adjacent to it.
+and can't hit anything adjacent to it. The Berserker hits hardest but has the slowest charge
+(lowest `attack_regen`) of any adventurer. See [docs/systems/castle.md](castle.md) for how the
+roster is recruited (Tavern) and selected (Quarters) before a battle.
+
+## Gold Economy
+
+- `EnemyData.bounty` (default `5`, tuned up for tougher types — Large Goblin `12`, Goblin
+  Shaman/Rider `10`) is awarded via `GameState.add_currency()` the instant an enemy dies in
+  `_attack_step()`. Enemies that reach the castle door instead (no kill) grant nothing.
+- `DayData.completion_reward` (`150` on `day_1.tres`) is awarded once, on a full Day clear, right
+  before `EventBus.day_won` fires.
+- The HUD's `GoldLabel` mirrors `GameState.currency` and updates every `_update_hud()` call so
+  gold gained from kills/clears is visible mid-battle, not just back in the Castle.
+- `GameState.currency` starts at `100` for a new save — enough to recruit the cheaper adventurers
+  outright, but a full Day clear (or several kills) is needed to afford the Berserker (`250`).
 
 ## Known Limitations / Next Up
 
-- Only two enemy types exist so far (Goblin, Large Goblin) — plenty of room for more variety.
-- No enemy abilities yet (stun, double-move) even though `EnemyData` has the fields.
-- No Towers (last-resort defense) yet.
 - Mage doesn't cast selectable spells yet — currently attacks identically to other types, just
   with different stats.
-- No adventurer placement limit tied to the Castle's Quarters.
 - No new placements allowed between waves once the day has started (only before the first
   wave) — might be worth revisiting since real breathing room exists between waves now.
+- Only Day 1 exists — no difficulty progression or additional Days yet.
+- No materials/crafting economy yet — gold is currently the only reward type coming out of a
+  battle.

@@ -13,3 +13,4 @@ is_boss = false
 can_stun = true
 stun_duration_steps = 2
 stun_range = 1
+bounty = 10

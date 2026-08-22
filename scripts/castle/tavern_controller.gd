@@ -2,7 +2,7 @@ extends Control
 class_name TavernController
 ## Recruits new adventurers into GameState.owned_adventurers on a real-time refresh timer.
 
-@export var pool_ids: Array[String] = ["swordsman", "archer", "mage"]
+@export var pool_ids: Array[String] = ["swordsman", "archer", "mage", "berserker"]
 @export var refresh_interval_seconds: int = 21600  # 6 real hours
 
 @onready var roster_list: VBoxContainer = $RosterList

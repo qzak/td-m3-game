@@ -2,11 +2,16 @@ extends Node
 ## Holds the player's persistent save data for the current session.
 ## Loaded/saved via SaveManager. Systems read/write through this singleton.
 
-var currency: int = 0
+var currency: int = 100
 var materials: Dictionary = {}  # material_id (String) -> amount (int)
 
-var owned_adventurers: Array = []  # Array[Dictionary] instance data (id, level, equipped items)
-var active_roster_ids: Array = []  # adventurer instance ids selected in Quarters
+## Every player starts owning the three founding adventurers already (no need to recruit them).
+var owned_adventurers: Array = [
+	{"def_id": "swordsman", "instance_id": "swordsman_start", "level": 1, "equipped": []},
+	{"def_id": "archer", "instance_id": "archer_start", "level": 1, "equipped": []},
+	{"def_id": "mage", "instance_id": "mage_start", "level": 1, "equipped": []},
+]
+var active_roster_ids: Array = ["swordsman", "archer", "mage"]  # pre-filled, matches starting capacity
 
 var building_levels: Dictionary = {
 	"tavern": 1,

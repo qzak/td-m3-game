@@ -15,5 +15,16 @@ text = "Quarters — choose your active roster for the next Day"
 position = Vector2(20, 50)
 text = "Active roster: 0 / 2"
 
-[node name="RosterList" type="VBoxContainer" parent="."]
+[node name="ActiveTitle" type="Label" parent="."]
 position = Vector2(20, 80)
+text = "Active Roster"
+
+[node name="ActiveList" type="VBoxContainer" parent="."]
+position = Vector2(20, 105)
+
+[node name="AvailableTitle" type="Label" parent="."]
+position = Vector2(320, 80)
+text = "Available Adventurers"
+
+[node name="AvailableList" type="VBoxContainer" parent="."]
+position = Vector2(320, 105)

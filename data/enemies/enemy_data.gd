@@ -17,4 +17,6 @@ class_name EnemyData
 @export var can_double_move: bool = false
 @export var double_move_chance: float = 0.5  ## chance per move step to move double distance
 
+@export var bounty: int = 5  ## gold awarded to the player when this enemy is killed
+
 @export var sprite: Texture2D

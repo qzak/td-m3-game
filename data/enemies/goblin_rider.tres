@@ -12,3 +12,4 @@ move_steps_per_turn = 1
 is_boss = false
 can_double_move = true
 double_move_chance = 0.5
+bounty = 10

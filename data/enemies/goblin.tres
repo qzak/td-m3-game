@@ -10,3 +10,4 @@ health = 25
 armour = 0
 move_steps_per_turn = 1
 is_boss = false
+bounty = 5

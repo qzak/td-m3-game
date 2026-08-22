@@ -11,3 +11,4 @@ armour = 2
 move_steps_per_turn = 1
 move_period = 2
 is_boss = false
+bounty = 12

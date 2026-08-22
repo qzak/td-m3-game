@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/adventurers/adventurer_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "berserker"
+display_name = "The Berserker"
+rarity = 2
+type = 0
+damage_min = 8
+damage_max = 14
+range_min = 1
+range_max = 1
+attack_pool = 140
+attack_regen = 20
+recruit_cost = 250

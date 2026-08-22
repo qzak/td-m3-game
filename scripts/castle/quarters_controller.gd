@@ -2,7 +2,8 @@ extends Control
 class_name QuartersController
 ## Lets the player pick which owned adventurers are active for the next TD battle.
 
-@onready var roster_list: VBoxContainer = $RosterList
+@onready var active_list: VBoxContainer = $ActiveList
+@onready var available_list: VBoxContainer = $AvailableList
 @onready var capacity_label: Label = $CapacityLabel
 
 func _ready() -> void:
@@ -12,7 +13,9 @@ func refresh() -> void:
 	_build_rows()
 
 func _build_rows() -> void:
-	for child in roster_list.get_children():
+	for child in active_list.get_children():
+		child.queue_free()
+	for child in available_list.get_children():
 		child.queue_free()
 
 	var capacity := GameState.capacity_for("quarters")
@@ -24,25 +27,41 @@ func _build_rows() -> void:
 		if def == null:
 			continue
 
+		var is_active := GameState.active_roster_ids.has(def_id)
 		var row := HBoxContainer.new()
-		var checkbox := CheckBox.new()
-		checkbox.text = def.display_name
-		checkbox.button_pressed = GameState.active_roster_ids.has(def_id)
-		checkbox.toggled.connect(_on_toggled.bind(def_id))
-		row.add_child(checkbox)
-		roster_list.add_child(row)
+		var label := Label.new()
+		label.text = def.display_name
+		label.custom_minimum_size = Vector2(160, 0)
+		row.add_child(label)
 
-func _on_toggled(pressed: bool, def_id: String) -> void:
+		var button := Button.new()
+		if is_active:
+			button.text = "Remove"
+			button.pressed.connect(_on_remove_pressed.bind(def_id))
+		else:
+			button.text = "Add"
+			button.disabled = GameState.active_roster_ids.size() >= capacity
+			button.pressed.connect(_on_add_pressed.bind(def_id))
+		row.add_child(button)
+
+		if is_active:
+			active_list.add_child(row)
+		else:
+			available_list.add_child(row)
+
+func _on_add_pressed(def_id: String) -> void:
 	var capacity := GameState.capacity_for("quarters")
 	var roster: Array = GameState.active_roster_ids.duplicate()
-	if pressed:
-		if roster.size() >= capacity:
-			_build_rows()  # revert the checkbox, capacity is full
-			return
-		if not roster.has(def_id):
-			roster.append(def_id)
-	else:
-		roster.erase(def_id)
-
+	if roster.size() >= capacity or roster.has(def_id):
+		_build_rows()
+		return
+	roster.append(def_id)
 	GameState.set_active_roster(roster)
 	_build_rows()
+
+func _on_remove_pressed(def_id: String) -> void:
+	var roster: Array = GameState.active_roster_ids.duplicate()
+	roster.erase(def_id)
+	GameState.set_active_roster(roster)
+	_build_rows()
+
