@@ -20,6 +20,7 @@ func save_game() -> void:
 		"building_levels": GameState.building_levels,
 		"tavern_roster_ids": GameState.tavern_roster_ids,
 		"tavern_next_refresh_unix": GameState.tavern_next_refresh_unix,
+		"tavern_reroll_count": GameState.tavern_reroll_count,
 		"smelter_queue": GameState.smelter_queue,
 		"unlocked_day_index": GameState.unlocked_day_index,
 		"mine_depth": GameState.mine_depth,
@@ -45,6 +46,7 @@ func load_game() -> bool:
 	GameState.building_levels = parsed.get("building_levels", GameState.building_levels)
 	GameState.tavern_roster_ids = parsed.get("tavern_roster_ids", [])
 	GameState.tavern_next_refresh_unix = parsed.get("tavern_next_refresh_unix", 0)
+	GameState.tavern_reroll_count = parsed.get("tavern_reroll_count", 0)
 	GameState.smelter_queue = parsed.get("smelter_queue", [])
 	GameState.unlocked_day_index = parsed.get("unlocked_day_index", 0)
 	GameState.mine_depth = parsed.get("mine_depth", 0)

@@ -20,11 +20,15 @@ var building_levels: Dictionary = {
 
 var tavern_roster_ids: Array = []
 var tavern_next_refresh_unix: int = 0
+var tavern_reroll_count: int = 0  # resets to 0 each time a Day is played
 
 var smelter_queue: Array = []  # Array[Dictionary] (item_id, complete_unix)
 
 var unlocked_day_index: int = 0
 var mine_depth: int = 0
+
+func _ready() -> void:
+	EventBus.day_started.connect(func(_idx): tavern_reroll_count = 0)
 
 func add_currency(amount: int) -> void:
 	currency += amount
@@ -59,6 +63,21 @@ func recruit_adventurer(def_id: String) -> bool:
 		"equipped": [],
 	})
 	EventBus.adventurer_recruited.emit(def_id)
+	return true
+
+## Cost of the next Tavern reroll; rises each time it's used, resets when a Day is played.
+func tavern_reroll_cost() -> int:
+	return 20 + 20 * tavern_reroll_count
+
+## Spends gold to replace the Tavern's roster on demand, ahead of its natural refresh timer.
+func reroll_tavern(pool_ids: Array) -> bool:
+	var cost := tavern_reroll_cost()
+	if currency < cost:
+		return false
+	currency -= cost
+	EventBus.currency_changed.emit(currency)
+	tavern_roster_ids = pool_ids.duplicate()
+	tavern_reroll_count += 1
 	return true
 
 ## Replaces the active TD roster, capped to the Quarters' current capacity.

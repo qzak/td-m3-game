@@ -11,5 +11,9 @@ anchor_bottom = 1.0
 position = Vector2(20, 20)
 text = "Tavern — sign contracts with available adventurers"
 
+[node name="RerollButton" type="Button" parent="."]
+position = Vector2(20, 40)
+text = "Reroll (20 gold)"
+
 [node name="RosterList" type="VBoxContainer" parent="."]
-position = Vector2(20, 60)
+position = Vector2(20, 80)

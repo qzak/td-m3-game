@@ -6,9 +6,11 @@ class_name TavernController
 @export var refresh_interval_seconds: int = 21600  # 6 real hours
 
 @onready var roster_list: VBoxContainer = $RosterList
+@onready var reroll_button: Button = $RerollButton
 
 func _ready() -> void:
 	_refresh_if_needed()
+	reroll_button.pressed.connect(_on_reroll_pressed)
 	_build_rows()
 
 func refresh() -> void:
@@ -22,6 +24,10 @@ func _refresh_if_needed() -> void:
 		GameState.tavern_next_refresh_unix = now + refresh_interval_seconds
 
 func _build_rows() -> void:
+	var reroll_cost := GameState.tavern_reroll_cost()
+	reroll_button.text = "Reroll (%d gold)" % reroll_cost
+	reroll_button.disabled = GameState.currency < reroll_cost
+
 	for child in roster_list.get_children():
 		child.queue_free()
 
@@ -53,4 +59,8 @@ func _is_owned(def_id: String) -> bool:
 
 func _on_sign_pressed(def_id: String) -> void:
 	if GameState.recruit_adventurer(def_id):
+		_build_rows()
+
+func _on_reroll_pressed() -> void:
+	if GameState.reroll_tavern(pool_ids):
 		_build_rows()

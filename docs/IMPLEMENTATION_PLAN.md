@@ -4,7 +4,8 @@ Based on the attached design doc. Target engine: Godot 4.6 (Mobile renderer, alr
 
 > As each system gets built, its actual (as-built) behavior is documented under
 > [docs/systems/](systems/) — check there for up-to-date implementation details rather than
-> just this plan. Currently: [docs/systems/tower_defense.md](systems/tower_defense.md).
+> just this plan. Currently: [docs/systems/tower_defense.md](systems/tower_defense.md),
+> [docs/systems/castle.md](systems/castle.md).
 
 ## 1. High-Level Architecture
 
