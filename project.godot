@@ -11,8 +11,8 @@ config_version=5
 [application]
 
 config/name="td-m3-game"
-config/features=PackedStringArray("4.6", "Mobile")
 run/main_scene="res://scenes/castle/castle.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
 
 [autoload]
 
