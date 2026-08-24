@@ -27,7 +27,7 @@ Three loosely-coupled "modes" share persistent player data:
 
 - **Castle** — hub scene with building UIs (Tavern, Smelter, Armour Smith, Weapon Smith, Armoury, Quarters, Towers).
 - **Tower Defense** — grid-based battle scene, played per "Day".
-- **Match-3 Mine** — resource-gathering mini-game, descending 8x8 board.
+- **Match-3 Mine** — resource-gathering mini-game, descending 10x10 board.
 - All three read/write a shared `GameState` autoload backed by `Resource`-based save data (adventurers, inventory, currency, building levels).
 
 ## 2. Project Folder Structure
@@ -125,10 +125,12 @@ Save data (`GameState`, persisted via `SaveManager`):
 
 ## 5. Match-3 Mine System
 
-- 8x8 board using a `Board` (Array of Array) of `TileData` (resource-type gem).
+- 10x10 board using a `Board` (Array of Array) of `TileData` (resource-type gem).
 - Standard match-3 detection (match_solver.gd): match-3+ horizontal/vertical, cascade resolution.
-- **Descend mechanic**: instead of refilling from top, once the top half is cleared/matched down, shift the entire board down by N rows and generate new rows at top — track a `depth` counter that increases material rarity odds the deeper you go.
-- Rewards: matched tiles award raw materials/currency directly into `GameState`; no fail state, purely a resource-gain loop (could add move limit or timer later for pacing).
+- the board should have randomly scattered pieces, with a few different types of "garbage" pieces that need to be matched in order to "get to the good stuff". Have dirt, stone and clay as three different garbage pieces.
+- **Descend mechanic**: After a match is made, do not drop new pieces from the top. Still resolve any gravity, but instead allow the player to keep finding matches until they have cleared pieces in the entire top half of the board i.e. top 5 rows. Once the top half has been fully cleared of pieces, the player "descends" down the mine. This would be indicated by 5 new rows being pushed up from the bottom, shifting existing pieces up to the top of the board. One such event increments the "depth" by one.
+- valuable pieces should appear once certain depth has been reached. As an example, copper should sporadically appear at depth level zero. Once player has reached depth level 5, iron could start appearing, and once they reach depth level 15, gold starts appearing.
+- Rewards: matched valuable pieces award raw materials/currency directly into `GameState`; no fail state, purely a resource-gain loop (could add move limit or timer later for pacing).
 
 ## 6. Castle Hub System
 
