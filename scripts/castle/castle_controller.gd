@@ -8,6 +8,7 @@ class_name CastleController
 @onready var tavern_button: Button = $UI/HUD/Controls/TavernButton
 @onready var quarters_button: Button = $UI/HUD/Controls/QuartersButton
 @onready var start_day_button: Button = $UI/HUD/Controls/StartDayButton
+@onready var mine_button: Button = $UI/HUD/Controls/MineButton
 
 func _ready() -> void:
 	SaveManager.load_game()
@@ -15,6 +16,7 @@ func _ready() -> void:
 	tavern_button.pressed.connect(func(): _show_panel(tavern_panel))
 	quarters_button.pressed.connect(func(): _show_panel(quarters_panel))
 	start_day_button.pressed.connect(_on_start_day_pressed)
+	mine_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/match3/mine.tscn"))
 	EventBus.currency_changed.connect(_on_currency_changed)
 
 	_show_panel(null)

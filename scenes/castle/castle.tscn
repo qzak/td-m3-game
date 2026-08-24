@@ -29,6 +29,9 @@ text = "Quarters"
 [node name="StartDayButton" type="Button" parent="UI/HUD/Controls"]
 text = "Start Day 1"
 
+[node name="MineButton" type="Button" parent="UI/HUD/Controls"]
+text = "Enter Mine"
+
 [node name="TavernPanel" parent="UI/HUD" instance=ExtResource("2")]
 position = Vector2(0, 90)
 

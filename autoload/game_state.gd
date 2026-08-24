@@ -31,6 +31,7 @@ var smelter_queue: Array = []  # Array[Dictionary] (item_id, complete_unix)
 
 var unlocked_day_index: int = 0
 var mine_depth: int = 0
+var mine_board_state: Array = []
 
 func _ready() -> void:
 	EventBus.day_started.connect(func(_idx): tavern_reroll_count = 0)

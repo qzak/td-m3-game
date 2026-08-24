@@ -10,6 +10,8 @@ func _ready() -> void:
 	EventBus.building_upgraded.connect(func(_id, _lvl): save_game())
 	EventBus.day_won.connect(func(_idx): save_game())
 	EventBus.day_lost.connect(func(_idx): save_game())
+	EventBus.mine_match_resolved.connect(func(_id, _amount): save_game())
+	EventBus.mine_depth_changed.connect(func(_depth): save_game())
 
 func save_game() -> void:
 	var data := {
@@ -24,6 +26,7 @@ func save_game() -> void:
 		"smelter_queue": GameState.smelter_queue,
 		"unlocked_day_index": GameState.unlocked_day_index,
 		"mine_depth": GameState.mine_depth,
+		"mine_board_state": GameState.mine_board_state,
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
@@ -55,4 +58,5 @@ func load_game() -> bool:
 	GameState.smelter_queue = parsed.get("smelter_queue", [])
 	GameState.unlocked_day_index = parsed.get("unlocked_day_index", 0)
 	GameState.mine_depth = parsed.get("mine_depth", 0)
+	GameState.mine_board_state = parsed.get("mine_board_state", [])
 	return true

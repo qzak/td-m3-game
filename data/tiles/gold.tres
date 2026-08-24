@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MineTileData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/tiles/mine_tile_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "gold"
+display_name = "Gold"
+depth_required = 15
+reward_material_id = "gold"
+reward_amount = 1
