@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BuildingData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/buildings/building_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "armoury"
+display_name = "Armoury"
+max_level = 5
+upgrade_material_costs = Array[Dictionary]([{}, {"copper": 5}, {"iron": 5}, {"iron": 10}])
+upgrade_currency_costs = Array[int]([100, 200, 350, 550])

@@ -20,7 +20,7 @@ func refresh() -> void:
 func _refresh_if_needed() -> void:
 	var now := Time.get_unix_time_from_system()
 	if now >= GameState.tavern_next_refresh_unix:
-		GameState.tavern_roster_ids = pool_ids.duplicate()
+		GameState.refresh_tavern_roster(pool_ids)
 		GameState.tavern_next_refresh_unix = now + refresh_interval_seconds
 
 func _build_rows() -> void:

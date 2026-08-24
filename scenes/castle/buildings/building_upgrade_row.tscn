@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/castle/building_upgrade_row.gd" id="1"]
+
+[node name="BuildingUpgradeRow" type="Control"]
+script = ExtResource("1")
+anchor_right = 1.0
+custom_minimum_size = Vector2(0, 60)
+
+[node name="Row" type="HBoxContainer" parent="."]
+anchor_right = 1.0
+
+[node name="Labels" type="VBoxContainer" parent="Row"]
+
+[node name="NameLevelLabel" type="Label" parent="Row/Labels"]
+text = "Building — Level 1/5"
+
+[node name="CostLabel" type="Label" parent="Row/Labels"]
+text = "Upgrade: —"
+
+[node name="UpgradeButton" type="Button" parent="Row"]
+text = "Upgrade"

@@ -1,0 +1,34 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/castle/armoury_controller.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/castle/buildings/building_upgrade_row.tscn" id="2"]
+
+[node name="Armoury" type="Control"]
+script = ExtResource("1")
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Title" type="Label" parent="."]
+position = Vector2(20, 20)
+text = "Armoury — equip crafted items onto your active roster"
+
+[node name="CapacityLabel" type="Label" parent="."]
+position = Vector2(20, 50)
+text = "Items: 0 / 3"
+
+[node name="ItemListTitle" type="Label" parent="."]
+position = Vector2(20, 80)
+text = "Crafted Items"
+
+[node name="ItemList" type="VBoxContainer" parent="."]
+position = Vector2(20, 105)
+
+[node name="AdventurerListTitle" type="Label" parent="."]
+position = Vector2(320, 80)
+text = "Active Roster"
+
+[node name="AdventurerList" type="VBoxContainer" parent="."]
+position = Vector2(320, 105)
+
+[node name="UpgradeRow" parent="." instance=ExtResource("2")]
+position = Vector2(20, 450)

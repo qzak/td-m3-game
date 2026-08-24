@@ -45,6 +45,12 @@ var adventurer_buttons: Dictionary = {}  # AdventurerData.id -> Button
 
 func _ready() -> void:
 	castle_hp = starting_castle_hp
+
+	if GameState.selected_day_index > 0:
+		var loaded_day: DayData = load("res://data/waves/day_%d.tres" % GameState.selected_day_index)
+		if loaded_day != null:
+			day_data = loaded_day
+
 	for wave in day_data.waves:
 		total_enemies_remaining_to_spawn += wave.count
 
@@ -75,11 +81,49 @@ func _build_placement_buttons() -> void:
 		var def: AdventurerData = load("res://data/adventurers/%s.tres" % def_id)
 		if def == null:
 			continue
+
+		var owned_entry: Dictionary = {}
+		for entry in GameState.owned_adventurers:
+			if entry["def_id"] == def_id:
+				owned_entry = entry
+				break
+
+		var damage_bonus: int = 0
+		var range_bonus: int = 0
+		var attack_pool_bonus: int = 0
+		var attack_regen_bonus: int = 0
+		if not owned_entry.is_empty():
+			var equipped: Dictionary = owned_entry["equipped"]
+			for item_instance_id in [equipped.get("weapon", ""), equipped.get("armour", "")]:
+				if item_instance_id == "":
+					continue
+				var item_entry: Dictionary = {}
+				for candidate in GameState.owned_items:
+					if candidate["instance_id"] == item_instance_id:
+						item_entry = candidate
+						break
+				if item_entry.is_empty():
+					continue
+				var item_data: ItemData = load("res://data/items/%s.tres" % item_entry["def_id"])
+				if item_data == null:
+					continue
+				damage_bonus += item_data.damage_bonus
+				range_bonus += item_data.range_bonus
+				attack_pool_bonus += item_data.attack_pool_bonus
+				attack_regen_bonus += item_data.attack_regen_bonus
+
+		var boosted: AdventurerData = def.duplicate()
+		boosted.damage_min += damage_bonus
+		boosted.damage_max += damage_bonus
+		boosted.range_max += range_bonus
+		boosted.attack_pool += attack_pool_bonus
+		boosted.attack_regen += attack_regen_bonus
+
 		var button := Button.new()
-		button.text = "Place %s" % def.display_name
-		button.pressed.connect(_select_adventurer.bind(def))
+		button.text = "Place %s" % boosted.display_name
+		button.pressed.connect(_select_adventurer.bind(boosted))
 		placement_buttons_container.add_child(button)
-		adventurer_buttons[def.id] = button
+		adventurer_buttons[boosted.id] = button
 
 func _on_return_button_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/castle/castle.tscn")
@@ -233,16 +277,36 @@ func _process_spawn_queue() -> void:
 
 func _attack_step() -> void:
 	for adventurer in adventurers:
-		while adventurer.can_attack():
-			var target := _find_target(adventurer)
-			if target == null:
-				break
-			adventurer.consume_pool()
-			var dmg := randi_range(adventurer.data.damage_min, adventurer.data.damage_max)
-			if target.take_damage(dmg):
-				enemies.erase(target)
-				GameState.add_currency(target.data.bounty)
-				target.queue_free()
+		var spell: SpellData = null
+		if adventurer.data.type == AdventurerData.AdventurerType.MAGIC and not adventurer.data.spell_ids.is_empty():
+			spell = load("res://data/adventurers/spells/%s.tres" % adventurer.data.spell_ids[0])
+
+		if spell != null and spell.is_aoe:
+			while adventurer.can_attack():
+				var targets := _find_targets_in_range(adventurer)
+				if targets.is_empty():
+					break
+				adventurer.consume_pool()
+				var kills: Array[TDEnemy] = []
+				for target in targets.duplicate():
+					var dmg := int(randi_range(adventurer.data.damage_min, adventurer.data.damage_max) * spell.damage_multiplier)
+					if target.take_damage(dmg):
+						kills.append(target)
+				for kill in kills:
+					enemies.erase(kill)
+					GameState.add_currency(kill.data.bounty)
+					kill.queue_free()
+		else:
+			while adventurer.can_attack():
+				var target := _find_target(adventurer)
+				if target == null:
+					break
+				adventurer.consume_pool()
+				var dmg := randi_range(adventurer.data.damage_min, adventurer.data.damage_max)
+				if target.take_damage(dmg):
+					enemies.erase(target)
+					GameState.add_currency(target.data.bounty)
+					target.queue_free()
 	_check_end_conditions()
 
 ## Targets the valid enemy furthest along the path (closest to the castle).
@@ -253,6 +317,14 @@ func _find_target(adventurer: TDAdventurer) -> TDEnemy:
 			if best == null or enemy.path_index > best.path_index:
 				best = enemy
 	return best
+
+## Collects every enemy currently in range of the adventurer, for AOE spellcasting.
+func _find_targets_in_range(adventurer: TDAdventurer) -> Array[TDEnemy]:
+	var targets: Array[TDEnemy] = []
+	for enemy in enemies:
+		if adventurer.is_in_range(enemy.current_cell):
+			targets.append(enemy)
+	return targets
 
 func _spawn_enemy(enemy_data: EnemyData) -> void:
 	var enemy: TDEnemy = ENEMY_SCENE.instantiate()

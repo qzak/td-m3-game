@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/castle/weapon_smith_controller.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/castle/buildings/building_upgrade_row.tscn" id="2"]
+
+[node name="WeaponSmith" type="Control"]
+script = ExtResource("1")
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Title" type="Label" parent="."]
+position = Vector2(20, 20)
+text = "Weapon Smith — craft weapons from refined materials"
+
+[node name="RecipeList" type="VBoxContainer" parent="."]
+position = Vector2(20, 60)
+
+[node name="UpgradeRow" instance=ExtResource("2") parent="."]
+building_id = "weapon_smith"
+position = Vector2(20, 400)

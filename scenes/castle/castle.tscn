@@ -1,8 +1,13 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/castle/castle_controller.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/castle/buildings/tavern.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/castle/buildings/quarters.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/castle/buildings/smelter.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/castle/buildings/weapon_smith.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/castle/buildings/armour_smith.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/castle/buildings/armoury.tscn" id="7"]
+[ext_resource type="PackedScene" path="res://scenes/castle/buildings/towers.tscn" id="8"]
 
 [node name="Castle" type="Node2D"]
 script = ExtResource("1")
@@ -26,14 +31,44 @@ text = "Tavern"
 [node name="QuartersButton" type="Button" parent="UI/HUD/Controls"]
 text = "Quarters"
 
-[node name="StartDayButton" type="Button" parent="UI/HUD/Controls"]
-text = "Start Day 1"
+[node name="SmelterButton" type="Button" parent="UI/HUD/Controls"]
+text = "Smelter"
+
+[node name="WeaponSmithButton" type="Button" parent="UI/HUD/Controls"]
+text = "Weapon Smith"
+
+[node name="ArmourSmithButton" type="Button" parent="UI/HUD/Controls"]
+text = "Armour Smith"
+
+[node name="ArmouryButton" type="Button" parent="UI/HUD/Controls"]
+text = "Armoury"
+
+[node name="TowersButton" type="Button" parent="UI/HUD/Controls"]
+text = "Towers"
 
 [node name="MineButton" type="Button" parent="UI/HUD/Controls"]
 text = "Enter Mine"
+
+[node name="DayList" type="VBoxContainer" parent="UI/HUD"]
+position = Vector2(400, 50)
 
 [node name="TavernPanel" parent="UI/HUD" instance=ExtResource("2")]
 position = Vector2(0, 90)
 
 [node name="QuartersPanel" parent="UI/HUD" instance=ExtResource("3")]
+position = Vector2(0, 90)
+
+[node name="SmelterPanel" parent="UI/HUD" instance=ExtResource("4")]
+position = Vector2(0, 90)
+
+[node name="WeaponSmithPanel" parent="UI/HUD" instance=ExtResource("5")]
+position = Vector2(0, 90)
+
+[node name="ArmourSmithPanel" parent="UI/HUD" instance=ExtResource("6")]
+position = Vector2(0, 90)
+
+[node name="ArmouryPanel" parent="UI/HUD" instance=ExtResource("7")]
+position = Vector2(0, 90)
+
+[node name="TowersPanel" parent="UI/HUD" instance=ExtResource("8")]
 position = Vector2(0, 90)

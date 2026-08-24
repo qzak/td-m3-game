@@ -5,7 +5,7 @@ Based on the attached design doc. Target engine: Godot 4.6 (Mobile renderer, alr
 > As each system gets built, its actual (as-built) behavior is documented under
 > [docs/systems/](systems/) — check there for up-to-date implementation details rather than
 > just this plan. Currently: [docs/systems/tower_defense.md](systems/tower_defense.md),
-> [docs/systems/castle.md](systems/castle.md).
+> [docs/systems/castle.md](systems/castle.md), [docs/systems/match3.md](systems/match3.md).
 
 ## 1. High-Level Architecture
 
@@ -145,18 +145,27 @@ Each building is a scene with a shared `BuildingBase` (level, upgrade cost looku
 
 ## 7. Suggested Build Order (Milestones)
 
-1. **Foundations** — autoloads (`EventBus`, `GameState`, `SaveManager`), base `Resource` classes, project settings/input map.
-2. **TD Core Loop (vertical slice)** — one hardcoded grid/path, place 1-2 adventurer types, move/attack step loop, one enemy type, win/lose condition. Playable without castle or mine.
-3. **Adventurer & Enemy Data-Driven Content** — convert hardcoded units to `.tres` data, add several adventurer/enemy types and abilities (stun, double-move, ranged/melee), add Towers.
-4. **Castle Hub Minimal** — Quarters (select roster) + Tavern (sign contracts) wired to `GameState`, enough to feed adventurers into TD.
-5. **Match-3 Mine** — board, matching, descend mechanic, material rewards feeding into `GameState`.
-6. **Remaining Buildings** — Smelter (timed queue), Armour/Weapon Smith (crafting), Armoury (capacity), building upgrade UI generalized via `BuildingData`.
-7. **Day/Wave Content & Progression** — multiple Days with `WaveData`, difficulty scaling, replay support.
+1. **Foundations** — autoloads (`EventBus`, `GameState`, `SaveManager`), base `Resource` classes, project settings/input map. ✅ Done.
+2. **TD Core Loop (vertical slice)** — one hardcoded grid/path, place 1-2 adventurer types, move/attack step loop, one enemy type, win/lose condition. Playable without castle or mine. ✅ Done.
+3. **Adventurer & Enemy Data-Driven Content** — convert hardcoded units to `.tres` data, add several adventurer/enemy types and abilities (stun, double-move, ranged/melee), add Towers. ✅ Done.
+4. **Castle Hub Minimal** — Quarters (select roster) + Tavern (sign contracts) wired to `GameState`, enough to feed adventurers into TD. ✅ Done.
+5. **Match-3 Mine** — board, matching, descend mechanic, material rewards feeding into `GameState`. ✅ Done.
+6. **Remaining Buildings** — Smelter (timed queue), Armour/Weapon Smith (crafting), Armoury (capacity), building upgrade UI generalized via `BuildingData`. ✅ Done — see [docs/systems/castle.md](systems/castle.md) (Smelter/Weapon Smith/Armour Smith/Armoury/Building Upgrades sections) and [docs/systems/tower_defense.md](systems/tower_defense.md#equipment-bonuses) for how equipped items now affect TD combat stats.
+7. **Day/Wave Content & Progression** — multiple Days with `WaveData`, difficulty scaling, replay support. 🟡 In progress — Day 1 + Day 2 exist, Castle Day-selection UI and `unlocked_day_index` progression are wired (see [docs/systems/tower_defense.md](systems/tower_defense.md#day-selection)); still needs dynamic Day discovery (`total_known_days()` is hardcoded) and more Days beyond 2.
 8. **Polish** — save/load robustness, mobile UI/touch input, audio/VFX, balancing pass.
 
 ## 8. Next Immediate Steps
 
-1. Scaffold folder structure above.
-2. Add `EventBus` and `GameState` autoloads.
-3. Define `AdventurerData`, `EnemyData` resource scripts.
-4. Build the milestone-2 TD vertical slice in a single test scene.
+Milestones 1–6 are complete; Milestone 7 is underway (see [docs/systems/](systems/) for as-built
+details). Remaining for Milestone 7 / next up:
+
+1. Make `GameState.total_known_days()` dynamic (e.g. scan `data/waves/day_*.tres`) instead of a
+   hardcoded `2`, so authoring a new Day doesn't require a code change too.
+2. Author Day 3+ with further difficulty scaling and any new enemy types/abilities.
+3. Give the Mage more than one spell and a way to pick between them (see
+   [docs/systems/tower_defense.md](systems/tower_defense.md#mage-spellcasting) — today it's a single
+   hardcoded AOE Fireball).
+4. Consider revisiting mid-battle placement (see [docs/systems/tower_defense.md](systems/tower_defense.md#known-limitations--next-up))
+   now that there's breathing room between waves.
+5. Mine pacing (move limit/timer) is still an open, lower-priority idea from the original design doc
+   — no fail state is intended, just pacing.

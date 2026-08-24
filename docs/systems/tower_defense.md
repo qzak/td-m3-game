@@ -104,6 +104,27 @@ The timer isn't running continuously for the whole Day, though — see below.
 - The HUD's `WaveLabel` shows `Day X — Wave Y/Z — Enemies left to spawn: N`, driven by
   `current_wave_index` and `total_enemies_remaining_to_spawn`.
 - `EventBus.day_started/day_won/day_lost` now emit `day_data.day_index` instead of a hardcoded 0.
+- [data/waves/day_2.tres](../../data/waves/day_2.tres) is a harder second Day (`difficulty_scalar =
+  1.3`, `completion_reward = 250`): goblins, then Goblin Riders, then Goblin Shamans, then Large
+  Goblins, then a fast 8-strong Goblin Rider finale wave (1-step spacing).
+
+## Day Selection
+
+- The Castle no longer hardcodes "Start Day 1" — `CastleController._build_day_list()` builds one
+  "Start Day N" button per day from `1` to `GameState.total_known_days()` (currently `2`), disabling
+  and appending `" (Locked)"` to any day beyond `GameState.unlocked_day_index`.
+- Pressing an unlocked day button sets `GameState.selected_day_index = N` then changes to
+  `td_battle.tscn`. `TDBattleController._ready()` checks `GameState.selected_day_index` before
+  summing up wave counts: if it's `> 0` and `res://data/waves/day_%d.tres` loads successfully, that
+  resource replaces the scene's exported `day_data`; otherwise the exported `day_data` (still
+  Day 1 in the `.tscn`) is used as-is, which keeps `td_battle.tscn` directly runnable/testable
+  without going through the Castle.
+- `GameState.unlocked_day_index` starts at `1` (Day 1 always available) and is bumped to
+  `day_index + 1` whenever `EventBus.day_won` fires, via a listener registered in
+  `GameState._ready()` — so clearing Day 1 unlocks Day 2, etc. There's no Day-replay restriction;
+  clearing a Day again just re-fires the same unlock logic (`maxi`, so it never regresses).
+- `GameState.total_known_days()` is currently a hardcoded `2` — it'll need to become dynamic (e.g.
+  scanning `data/waves/day_*.tres`) once more Days are authored.
 
 ## Placement & Range Preview
 
@@ -137,6 +158,44 @@ and can't hit anything adjacent to it. The Berserker hits hardest but has the sl
 (lowest `attack_regen`) of any adventurer. See [docs/systems/castle.md](castle.md) for how the
 roster is recruited (Tavern) and selected (Quarters) before a battle.
 
+## Mage Spellcasting
+
+- `AdventurerData.spell_ids` (only meaningful for `type == MAGIC`) references `SpellData` resources
+  at `res://data/adventurers/spells/<id>.tres` (`SpellData`: `id`, `display_name`, `is_aoe: bool`,
+  `damage_multiplier: float`). The Mage's only spell today is `fireball` (`is_aoe = true`,
+  `damage_multiplier = 0.6`).
+- In `_attack_step()`, a magic adventurer with a non-empty `spell_ids` whose first spell has
+  `is_aoe = true` hits **every** enemy `_find_targets_in_range()` finds in one go instead of
+  picking a single target via `_find_target()` — each hit rolls `damage_min..damage_max` normally
+  and then multiplies by `damage_multiplier` (lower than 1.0 to offset hitting multiple enemies at
+  once). The attack pool is still only consumed once per attack tick, same as a single-target hit.
+  Kills are collected during the AOE sweep and removed/bountied/freed afterward (not mid-iteration)
+  to avoid mutating the `enemies` array while scanning it.
+- Non-magic adventurers, and any magic adventurer without an AOE spell configured, are completely
+  unaffected — they keep using the original single-target `_find_target()` path. Towers also use
+  the single-target path (they have no `spell_ids`).
+- Only one spell per adventurer is supported today (`spell_ids[0]`) — there's no spell-selection UI
+  or spell-switching mid-battle yet.
+
+## Equipment Bonuses
+
+- Items crafted at the Weapon/Armour Smith and equipped via the Armoury (see
+  [docs/systems/castle.md](castle.md#armoury)) apply their stat bonuses the moment a battle's
+  placement buttons are built, not when they're equipped — `TDBattleController._build_placement_buttons()`
+  looks up each roster `def_id`'s `GameState.owned_adventurers` entry, resolves its
+  `equipped.weapon`/`equipped.armour` instance ids through `GameState.owned_items` to their
+  `ItemData` defs, sums `damage_bonus`/`range_bonus`/`attack_pool_bonus`/`attack_regen_bonus`
+  across whichever are equipped, and applies them to a `def.duplicate()` copy of the base
+  `AdventurerData` (`damage_min`/`damage_max` both get `damage_bonus`, `range_max` gets
+  `range_bonus` — `range_min` is untouched, so bonuses only extend reach rather than shrink it —
+  and `attack_pool`/`attack_regen` get their respective bonuses). That boosted copy, not the raw
+  `.tres` data, is what actually gets placed on the grid.
+- Re-equipping/unequipping items mid-Castle-visit is picked up the next time `_build_placement_buttons()`
+  runs (i.e. the next time `td_battle.tscn` loads) — there's no need to re-place a unit for the
+  Castle-side change to take effect, since placement buttons are only ever built once per battle.
+- `_spawn_towers()`'s manually-constructed `AdventurerData.new()` for the Towers is unrelated to
+  this — Towers have no equipment slots.
+
 ## Gold Economy
 
 - `EnemyData.bounty` (default `5`, tuned up for tougher types — Large Goblin `12`, Goblin
@@ -151,10 +210,10 @@ roster is recruited (Tavern) and selected (Quarters) before a battle.
 
 ## Known Limitations / Next Up
 
-- Mage doesn't cast selectable spells yet — currently attacks identically to other types, just
-  with different stats.
+- Mage only has one hardcoded AOE spell (Fireball) with no selection UI or alternate spells yet —
+  see [Mage Spellcasting](#mage-spellcasting).
 - No new placements allowed between waves once the day has started (only before the first
   wave) — might be worth revisiting since real breathing room exists between waves now.
-- Only Day 1 exists — no difficulty progression or additional Days yet.
-- No materials/crafting economy yet — gold is currently the only reward type coming out of a
-  battle.
+- Only Days 1–2 exist and `GameState.total_known_days()` is hardcoded — no dynamic Day discovery,
+  and no further difficulty curve beyond Day 2 yet.
+

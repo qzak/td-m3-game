@@ -6,6 +6,12 @@ signal adventurer_recruited(adventurer_id: String)
 signal currency_changed(new_amount: int)
 signal materials_changed(material_id: String, new_amount: int)
 
+signal item_crafted(def_id: String)
+signal item_equipped(adventurer_instance_id: String, item_instance_id: String)
+signal item_unequipped(adventurer_instance_id: String, item_instance_id: String)
+signal smelting_started(material_id: String)
+signal smelting_collected(output_id: String, amount: int)
+
 signal day_started(day_index: int)
 signal day_won(day_index: int)
 signal day_lost(day_index: int)

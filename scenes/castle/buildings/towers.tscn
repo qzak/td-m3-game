@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/castle/towers_panel.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/castle/buildings/building_upgrade_row.tscn" id="2"]
+
+[node name="Towers" type="Control"]
+script = ExtResource("1")
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Title" type="Label" parent="."]
+position = Vector2(20, 20)
+text = "Towers — last-resort defenders flanking the castle door"
+
+[node name="UpgradeRow" parent="." instance=ExtResource("2")]
+building_id = "towers"
+position = Vector2(20, 60)

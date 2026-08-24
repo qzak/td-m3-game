@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/items/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "steel_blade"
+display_name = "Steel Blade"
+slot = 0
+rarity = 2
+required_smith_level = 2
+recipe_materials = {"refined_iron": 3}
+damage_bonus = 5
+range_bonus = 0
+attack_pool_bonus = 10
+attack_regen_bonus = 0

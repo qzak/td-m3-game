@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/items/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "gilded_plate"
+display_name = "Gilded Plate"
+slot = 1
+rarity = 3
+required_smith_level = 3
+recipe_materials = {"refined_gold": 2, "refined_iron": 2}
+damage_bonus = 0
+range_bonus = 1
+attack_pool_bonus = 60
+attack_regen_bonus = 15

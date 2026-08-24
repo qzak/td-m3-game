@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/items/item_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "iron_sword"
+display_name = "Iron Sword"
+slot = 0
+rarity = 1
+required_smith_level = 1
+recipe_materials = {"refined_copper": 3}
+damage_bonus = 2
+range_bonus = 0
+attack_pool_bonus = 0
+attack_regen_bonus = 0
