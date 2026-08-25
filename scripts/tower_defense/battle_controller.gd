@@ -18,7 +18,6 @@ const ADVENTURER_SCENE := preload("res://scenes/tower_defense/adventurer_unit.ts
 @onready var step_timer: Timer = $StepTimer
 @onready var castle_hp_label: Label = $UI/HUD/CastleHPLabel
 @onready var wave_label: Label = $UI/HUD/WaveLabel
-@onready var gold_label: Label = $UI/HUD/GoldLabel
 @onready var result_label: Label = $UI/HUD/ResultLabel
 @onready var selected_label: Label = $UI/HUD/SelectedLabel
 @onready var start_button: Button = $UI/HUD/Controls/StartBattleButton
@@ -502,7 +501,6 @@ func _check_end_conditions() -> void:
 
 func _update_hud() -> void:
 	castle_hp_label.text = "Castle HP: %d" % castle_hp
-	gold_label.text = "Gold: %d" % GameState.currency
 	var wave_display := mini(current_wave_index + 1, day_data.waves.size())
 	wave_label.text = "Day %d — Wave %d/%d — Enemies left to spawn: %d" % [
 		day_data.day_index, wave_display, day_data.waves.size(), total_enemies_remaining_to_spawn

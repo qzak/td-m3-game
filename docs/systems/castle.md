@@ -8,7 +8,8 @@ alongside code changes so it stays a reliable reference. See
 
 | File | Responsibility |
 |---|---|
-| [scenes/castle/castle.tscn](../../scenes/castle/castle.tscn) | Hub scene: currency label, panel-switching buttons, Start Day button. Currently the project's run scene. |
+| [scenes/castle/castle.tscn](../../scenes/castle/castle.tscn) | Hub scene: panel-switching buttons, day selection, and shared resource HUD. Currently the project's run scene. |
+| [scenes/ui/resource_hud.tscn](../../scenes/ui/resource_hud.tscn) / [scripts/ui/resource_hud.gd](../../scripts/ui/resource_hud.gd) (`ResourceHUD`) | Global compact resource strip with hover/tap-expand details, shared across Castle/TD/Mine. |
 | [scripts/castle/castle_controller.gd](../../scripts/castle/castle_controller.gd) (`CastleController`) | Loads the save on `_ready`, toggles between Tavern/Quarters panels, starts the TD battle scene. |
 | [scenes/castle/buildings/tavern.tscn](../../scenes/castle/buildings/tavern.tscn) / [scripts/castle/tavern_controller.gd](../../scripts/castle/tavern_controller.gd) (`TavernController`) | Real-time-refreshed adventurer roster; "Sign Contract" spends currency and adds to `GameState.owned_adventurers`. |
 | [scenes/castle/buildings/quarters.tscn](../../scenes/castle/buildings/quarters.tscn) / [scripts/castle/quarters_controller.gd](../../scripts/castle/quarters_controller.gd) (`QuartersController`) | Capacity-limited toggle list to choose `GameState.active_roster_ids` for the next Day. |
@@ -40,6 +41,10 @@ alongside code changes so it stays a reliable reference. See
   `day_won`/`day_lost`), the scene reloads `castle.tscn` fresh — `CastleController._ready()` runs
   again and reloads the save, so anything `SaveManager` persisted mid-battle carries over (including
   any newly-unlocked Day).
+- Layout pass: Castle now uses a left rail for building/day controls and keeps the currently-open
+  building panel offset to the right to avoid top-bar overlap.
+- The shared `ResourceHUD` lives in the top-right: its compact row is always visible, and hovering
+  (desktop) or tapping (mobile) expands a fuller readout including refined materials.
 
 ## Building Upgrades
 
@@ -179,4 +184,3 @@ alongside code changes so it stays a reliable reference. See
 - No item rarity/tier visuals yet — the Smiths only gate crafting by `required_smith_level`, and the
   Armoury only shows item names, not rarity.
 - Only one weapon + one armour slot per adventurer; no accessory/trinket slot yet.
-

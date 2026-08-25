@@ -10,6 +10,7 @@ button and returns through `Return to Castle`.
 | `scripts/match3/board.gd` (`MineBoard`) | Owns the tile array, legal swaps, match resolution, gravity, descent, depth gates, and serialization. |
 | `scripts/match3/match_solver.gd` (`MineMatchSolver`) | Finds horizontal and vertical runs of three or more, including boards with empty cells. |
 | `scripts/match3/mine_controller.gd` (`MineController`) | Draws the board, handles click-to-swap input, applies rewards to `GameState`, and updates the HUD. |
+| `scenes/ui/resource_hud.tscn` / `scripts/ui/resource_hud.gd` (`ResourceHUD`) | Global compact resource strip with hover/tap-expand details, shared across Castle/TD/Mine. |
 | `data/tiles/*.tres` | Data-driven dirt, stone, clay, copper, iron, and gold tile definitions. |
 | `autoload/save_manager.gd` | Persists `mine_depth` and the serialized current board in `user://savegame.json`. |
 
@@ -31,8 +32,10 @@ button and returns through `Return to Castle`.
 
 ## Animation & Input Locking
 
-- `MineBoard` emits ordered animation events and `MineController` plays them as a queue, so match
-  resolution always appears as **clear → gravity**, repeating for cascades.
+- `MineBoard` emits ordered animation events and `MineController` plays them as a queue, so legal
+  adjacent swaps now appear as **swap → clear → gravity**, repeating for cascades.
+- **Swap** animation: a legal adjacent swap is animated first (`0.14s`) before any clear/gravity
+  pass runs; rejected swaps still revert immediately with no committed swap animation.
 - **Clear** animation: matched tiles shrink and fade (`0.18s`) before the next step.
 - **Gravity** animation: moved tiles slide to their compacted row (`0.22s`), with destination cells
   hidden until tweens complete to avoid double-draw artifacts.
@@ -41,3 +44,5 @@ button and returns through `Return to Castle`.
 - While any animation is running, board input is hard-gated (`_unhandled_input` early return),
   `Descend` is disabled, active selection is cleared, and status is pinned to `Animating mine...`.
   Deferred status text (for example `New layer opened`) is shown after the queue finishes.
+- Mine-specific HUD now focuses on depth/status/actions; shared resource counts moved to the global
+  `ResourceHUD` in the scene's top-right corner.

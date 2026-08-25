@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/match3/mine_controller.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/ui/resource_hud.tscn" id="2"]
 
 [node name="Mine" type="Node2D"]
 script = ExtResource("1")
@@ -15,31 +16,28 @@ theme_override_font_sizes/font_size = 28
 
 [node name="DepthLabel" type="Label" parent="UI"]
 offset_left = 32.0
-offset_top = 82.0
+offset_top = 74.0
 text = "Mine depth: 0"
 theme_override_font_sizes/font_size = 20
 
-[node name="MaterialsLabel" type="Label" parent="UI"]
-offset_left = 32.0
-offset_top = 122.0
-text = "Materials:"
-
 [node name="StatusLabel" type="Label" parent="UI"]
 offset_left = 32.0
-offset_top = 190.0
+offset_top = 118.0
 text = "Select a tile"
 
 [node name="DescendButton" type="Button" parent="UI"]
 offset_left = 32.0
-offset_top = 240.0
+offset_top = 158.0
 offset_right = 190.0
-offset_bottom = 284.0
+offset_bottom = 202.0
 text = "Descend"
 disabled = true
 
 [node name="BackButton" type="Button" parent="UI"]
 offset_left = 32.0
-offset_top = 650.0
+offset_top = 642.0
 offset_right = 190.0
-offset_bottom = 694.0
+offset_bottom = 686.0
 text = "Return to Castle"
+
+[node name="ResourceHUD" parent="UI" instance=ExtResource("2")]

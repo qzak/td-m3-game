@@ -85,6 +85,13 @@ func try_swap(first: Vector2i, second: Vector2i) -> bool:
 		tiles[first.y][first.x] = first_tile
 		tiles[second.y][second.x] = second_tile
 		return false
+	animation_event.emit({
+		"type": "swap",
+		"first": first,
+		"second": second,
+		"first_tile_id": first_tile.id,
+		"second_tile_id": second_tile.id,
+	})
 	_resolve_matches()
 	return true
 

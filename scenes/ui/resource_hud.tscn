@@ -1,0 +1,45 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/resource_hud.gd" id="1"]
+
+[node name="ResourceHUD" type="Control"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 180.0
+script = ExtResource("1")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 6
+
+[node name="CompactButton" type="Button" parent="Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 30)
+text = "Gold 0  Cu 0  Fe 0  Au 0"
+theme_override_font_sizes/font_size = 15
+
+[node name="DetailsPanel" type="PanelContainer" parent="Panel/Margin/VBox"]
+visible = false
+
+[node name="DetailsLabel" type="Label" parent="Panel/Margin/VBox/DetailsPanel"]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 8.0
+offset_bottom = 8.0
+text = "Resources"
+theme_override_font_sizes/font_size = 14

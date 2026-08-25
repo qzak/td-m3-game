@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/castle/castle_controller.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/castle/buildings/tavern.tscn" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://scenes/castle/buildings/armour_smith.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/castle/buildings/armoury.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://scenes/castle/buildings/towers.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://scenes/ui/resource_hud.tscn" id="9"]
 
 [node name="Castle" type="Node2D"]
 script = ExtResource("1")
@@ -18,12 +19,11 @@ script = ExtResource("1")
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="CurrencyLabel" type="Label" parent="UI/HUD"]
-position = Vector2(20, 20)
-text = "Gold: 0"
-
-[node name="Controls" type="HBoxContainer" parent="UI/HUD"]
-position = Vector2(20, 50)
+[node name="Controls" type="GridContainer" parent="UI/HUD"]
+position = Vector2(20, 68)
+columns = 4
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 8
 
 [node name="TavernButton" type="Button" parent="UI/HUD/Controls"]
 text = "Tavern"
@@ -50,25 +50,28 @@ text = "Towers"
 text = "Enter Mine"
 
 [node name="DayList" type="VBoxContainer" parent="UI/HUD"]
-position = Vector2(400, 50)
+position = Vector2(20, 190)
+theme_override_constants/separation = 8
 
 [node name="TavernPanel" parent="UI/HUD" instance=ExtResource("2")]
-position = Vector2(0, 90)
+position = Vector2(280, 72)
 
 [node name="QuartersPanel" parent="UI/HUD" instance=ExtResource("3")]
-position = Vector2(0, 90)
+position = Vector2(280, 72)
 
 [node name="SmelterPanel" parent="UI/HUD" instance=ExtResource("4")]
-position = Vector2(0, 90)
+position = Vector2(280, 72)
 
 [node name="WeaponSmithPanel" parent="UI/HUD" instance=ExtResource("5")]
-position = Vector2(0, 90)
+position = Vector2(280, 72)
 
 [node name="ArmourSmithPanel" parent="UI/HUD" instance=ExtResource("6")]
-position = Vector2(0, 90)
+position = Vector2(280, 72)
 
 [node name="ArmouryPanel" parent="UI/HUD" instance=ExtResource("7")]
-position = Vector2(0, 90)
+position = Vector2(280, 72)
 
 [node name="TowersPanel" parent="UI/HUD" instance=ExtResource("8")]
-position = Vector2(0, 90)
+position = Vector2(280, 72)
+
+[node name="ResourceHUD" parent="UI/HUD" instance=ExtResource("9")]

@@ -4,6 +4,7 @@ class_name MineController
 const BOARD_SCRIPT = preload("res://scripts/match3/board.gd")
 const BOARD_WIDTH := 10
 const BOARD_HEIGHT := 10
+const SWAP_ANIMATION_TIME := 0.14
 const CLEAR_ANIMATION_TIME := 0.18
 const GRAVITY_ANIMATION_TIME := 0.22
 const DESCEND_ANIMATION_TIME := 0.3
@@ -26,7 +27,6 @@ class AnimatedTile extends RefCounted:
 	var scale: float = 1.0
 
 @onready var depth_label: Label = $UI/DepthLabel
-@onready var materials_label: Label = $UI/MaterialsLabel
 @onready var status_label: Label = $UI/StatusLabel
 @onready var back_button: Button = $UI/BackButton
 @onready var descend_button: Button = $UI/DescendButton
@@ -125,10 +125,6 @@ func _on_descend_pressed() -> void:
 
 func _update_hud() -> void:
 	depth_label.text = "Mine depth: %d" % board.depth
-	var material_text := "Materials:"
-	for material_id in ["copper", "iron", "gold"]:
-		material_text += "  %s %d" % [material_id.capitalize(), GameState.materials.get(material_id, 0)]
-	materials_label.text = material_text
 	descend_button.disabled = is_animating or not board.can_descend()
 
 func _draw() -> void:
@@ -165,6 +161,8 @@ func _play_animation_queue() -> void:
 	while not animation_queue.is_empty():
 		var event: Dictionary = animation_queue.pop_front()
 		match event.get("type", ""):
+			"swap":
+				await _play_swap_animation(event)
 			"clear":
 				await _play_clear_animation(event.get("cells", []))
 			"gravity":
@@ -209,6 +207,50 @@ func _play_clear_animation(cells: Array) -> void:
 	await tween.finished
 	for cell in clear_cells:
 		_set_visual_tile_id(cell, null)
+	animation_tiles.clear()
+	hidden_cells.clear()
+	queue_redraw()
+
+func _play_swap_animation(event: Dictionary) -> void:
+	var first: Vector2i = event.get("first", Vector2i.ZERO)
+	var second: Vector2i = event.get("second", Vector2i.ZERO)
+	if not _is_visual_cell(first) or not _is_visual_cell(second):
+		return
+
+	var first_tile_id: String = event.get("first_tile_id", "")
+	if first_tile_id.is_empty():
+		var existing_first = _get_visual_tile_id(first)
+		first_tile_id = existing_first if existing_first != null else ""
+
+	var second_tile_id: String = event.get("second_tile_id", "")
+	if second_tile_id.is_empty():
+		var existing_second = _get_visual_tile_id(second)
+		second_tile_id = existing_second if existing_second != null else ""
+
+	animation_tiles.clear()
+	hidden_cells.clear()
+	hidden_cells[_cell_key(first)] = true
+	hidden_cells[_cell_key(second)] = true
+
+	var first_tile := AnimatedTile.new()
+	first_tile.tile_id = first_tile_id
+	first_tile.position = _cell_position(first)
+	animation_tiles.append(first_tile)
+
+	var second_tile := AnimatedTile.new()
+	second_tile.tile_id = second_tile_id
+	second_tile.position = _cell_position(second)
+	animation_tiles.append(second_tile)
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(first_tile, "position", _cell_position(second), SWAP_ANIMATION_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(second_tile, "position", _cell_position(first), SWAP_ANIMATION_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	await tween.finished
+
+	_set_visual_tile_id(first, second_tile_id if not second_tile_id.is_empty() else null)
+	_set_visual_tile_id(second, first_tile_id if not first_tile_id.is_empty() else null)
+
 	animation_tiles.clear()
 	hidden_cells.clear()
 	queue_redraw()

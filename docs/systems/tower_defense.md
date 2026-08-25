@@ -14,6 +14,7 @@ alongside code changes so it stays a reliable reference. See
 | [scripts/tower_defense/adventurer.gd](../../scripts/tower_defense/adventurer.gd) (`TDAdventurer`) | Per-placed-unit state: attack pool charge/regen, range check. |
 | [scripts/tower_defense/enemy.gd](../../scripts/tower_defense/enemy.gd) (`TDEnemy`) | Per-enemy state: health/armour, path following, move-speed cooldown. |
 | [scenes/tower_defense/adventurer_unit.tscn](../../scenes/tower_defense/adventurer_unit.tscn) / [enemy_unit.tscn](../../scenes/tower_defense/enemy_unit.tscn) | Placeholder visuals (colored square + stat label) — no art yet. |
+| [scenes/ui/resource_hud.tscn](../../scenes/ui/resource_hud.tscn) / [scripts/ui/resource_hud.gd](../../scripts/ui/resource_hud.gd) (`ResourceHUD`) | Global compact resource strip with hover/tap-expand details, shared across Castle/TD/Mine. |
 | [data/adventurers/*.tres](../../data/adventurers/) | `AdventurerData` resource instances (see roster below). |
 | [data/enemies/goblin.tres](../../data/enemies/goblin.tres), [large_goblin.tres](../../data/enemies/large_goblin.tres) | Enemy types (see roster below). |
 | [data/waves/day_1.tres](../../data/waves/day_1.tres) + `day1_wave*.tres` | `DayData`/`WaveData` resources defining the current Day's wave sequence (see below). |
@@ -32,6 +33,8 @@ alongside code changes so it stays a reliable reference. See
 - **Important gotcha:** the `HUD` `Control` covers the whole viewport, so its `mouse_filter`
   must stay `IGNORE` (`2`) or it silently swallows clicks/hover meant for the grid. Buttons
   underneath keep their own `STOP` filter and still work normally.
+- Resource display is now provided by the shared `ResourceHUD` at top-right, while battle-specific
+  labels (castle HP, wave state, selection/status) stay on the TD HUD.
 
 ## Battle Loop
 
@@ -253,8 +256,8 @@ roster is recruited (Tavern) and selected (Quarters) before a battle.
   `_attack_step()`. Enemies that reach the castle door instead (no kill) grant nothing.
 - `DayData.completion_reward` (`150` on `day_1.tres`) is awarded once, on a full Day clear, right
   before `EventBus.day_won` fires.
-- The HUD's `GoldLabel` mirrors `GameState.currency` and updates every `_update_hud()` call so
-  gold gained from kills/clears is visible mid-battle, not just back in the Castle.
+- The shared `ResourceHUD` mirrors `GameState.currency` and materials in real time via `EventBus`,
+  so gold/material gains are visible mid-battle, not just back in the Castle.
 - `GameState.currency` starts at `100` for a new save — enough to recruit the cheaper adventurers
   outright, but a full Day clear (or several kills) is needed to afford the Berserker (`250`).
 
