@@ -161,16 +161,16 @@ dynamic Day discovery + Day 3, the Mage's second spell (`arcane_bolt`) with a pr
 spell-selection UI, and mid-battle reinforcement + repositioning during between-wave breathers.
 Remaining / next up:
 
-1. Add some animations to the mine: create animations when gravity takes effect, when the gems are being matched, and 
-   when you descend down the mine. The animations should be smooth and pleasant to look at. Future updates could include some visual effects when the gems are matched to make matching more satisfying.
-2. Add animations to the TD board: create animations for enemies going from space to space, for now create a simple
-   hopping animation from square to square. They also need some death animations. In the future, could implement different movement styles per enemy type, as well as unique death animations, but those will come once we have some sprites.
-   Some basic animations for various attacks also need to be put in place. Simple projectiles for ranged, and swings of a weapon for melee.
-3. Author Day 4+ (data-only now) and continue the difficulty curve — possibly introduce new enemy
+1. Improve the UI in all the game areas. The castle, the match-3 game etc.
+   At the moment the UI is all over the place and some objects overlap each other.
+2. The game should have a HUD which displays the various resources regardless of which part of the game you're in.
+   The HUD should be unobtrusive enough so it doesn't take a lot of space, but when hovered over (or tapped on mobile), it should display more information on the resources.
+3. In the match-3 game add an animation for swapping of the pieces that should happen before any other animations.
+4. Author Day 4+ (data-only now) and continue the difficulty curve — possibly introduce new enemy
    types/abilities to keep it fresh.
-4. Allow switching an already-placed Mage's spell mid-battle (today the spell is chosen only at
+5. Allow switching an already-placed Mage's spell mid-battle (today the spell is chosen only at
    placement — see [docs/systems/tower_defense.md](systems/tower_defense.md#mage-spellcasting)).
-5. Add more spells (e.g. a slow/utility spell) now that multi-spell + selection exists.
-6. Mine pacing (move limit/timer) is still an open, lower-priority idea from the original design doc
+6. Add more spells (e.g. a slow/utility spell) now that multi-spell + selection exists.
+7. Mine pacing (move limit/timer) is still an open, lower-priority idea from the original design doc
    — no fail state is intended, just pacing.
-7. Milestone 8 polish: save/load robustness, mobile UI/touch input, audio/VFX, balancing pass.
+8. Milestone 8 polish: save/load robustness, mobile UI/touch input, audio/VFX, balancing pass.
