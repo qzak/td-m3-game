@@ -37,7 +37,7 @@ var is_animating := false
 var animation_queue: Array = []
 var animation_tiles: Array = []
 var hidden_cells: Dictionary = {}
-var staged_movement_tiles: Dictionary = {}
+var visual_tile_ids: Array = []
 var post_animation_status := ""
 var definitions: Array = [
 	preload("res://data/tiles/dirt.tres"),
@@ -110,6 +110,8 @@ func _on_depth_advanced(new_depth: int) -> void:
 func _on_board_changed() -> void:
 	GameState.mine_board_state = board.serialize()
 	SaveManager.save_game()
+	if not is_animating and animation_queue.is_empty():
+		_sync_visual_tiles_from_board()
 	_update_hud()
 	queue_redraw()
 
@@ -134,14 +136,18 @@ func _draw() -> void:
 	for y in range(BOARD_HEIGHT):
 		for x in range(BOARD_WIDTH):
 			var rect := Rect2(BOARD_ORIGIN + Vector2(x, y) * CELL_SIZE, Vector2(CELL_SIZE - 3, CELL_SIZE - 3))
-			var tile = null
-			if not board.tiles.is_empty() and not hidden_cells.has(_cell_key(Vector2i(x, y))):
-				tile = board.tiles[y][x]
-			var color: Color = TILE_COLORS.get(tile.id, Color("39484d")) if tile != null else Color("253239")
+			var tile_id := ""
+			var cell_key := _cell_key(Vector2i(x, y))
+			if not hidden_cells.has(cell_key):
+				if is_animating and not visual_tile_ids.is_empty():
+					tile_id = visual_tile_ids[y][x] if visual_tile_ids[y][x] != null else ""
+				elif not board.tiles.is_empty() and board.tiles[y][x] != null:
+					tile_id = board.tiles[y][x].id
+			var color: Color = TILE_COLORS.get(tile_id, Color("39484d")) if not tile_id.is_empty() else Color("253239")
 			draw_rect(rect, color, true)
 			draw_rect(rect, Color("dce5e1", 0.35), false, 2.0)
-			if tile != null:
-				draw_string(ThemeDB.fallback_font, rect.position + Vector2(9, 32), tile.display_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+			if not tile_id.is_empty():
+				draw_string(ThemeDB.fallback_font, rect.position + Vector2(9, 32), _tile_display_name(tile_id), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 	for animated_tile in animation_tiles:
 		_draw_animated_tile(animated_tile)
 	if selected_cell.x >= 0:
@@ -160,12 +166,7 @@ func _play_animation_queue() -> void:
 		var event: Dictionary = animation_queue.pop_front()
 		match event.get("type", ""):
 			"clear":
-				var upcoming_gravity_moves: Array = []
-				if not animation_queue.is_empty():
-					var next_event: Dictionary = animation_queue[0]
-					if next_event.get("type", "") == "gravity":
-						upcoming_gravity_moves = next_event.get("moves", [])
-				await _play_clear_animation(event.get("cells", []), upcoming_gravity_moves)
+				await _play_clear_animation(event.get("cells", []))
 			"gravity":
 				await _play_movement_animation(event.get("moves", []), GRAVITY_ANIMATION_TIME)
 			"descend":
@@ -174,7 +175,7 @@ func _play_animation_queue() -> void:
 				await _play_movement_animation(descend_moves, DESCEND_ANIMATION_TIME)
 	hidden_cells.clear()
 	animation_tiles.clear()
-	staged_movement_tiles.clear()
+	_sync_visual_tiles_from_board()
 	is_animating = false
 	_update_hud()
 	if not post_animation_status.is_empty():
@@ -184,30 +185,20 @@ func _play_animation_queue() -> void:
 		_set_status("Select a tile or empty space in this row")
 	queue_redraw()
 
-func _play_clear_animation(cells: Array, upcoming_gravity_moves: Array = []) -> void:
+func _play_clear_animation(cells: Array) -> void:
 	if cells.is_empty():
 		return
 	animation_tiles.clear()
 	hidden_cells.clear()
-	staged_movement_tiles.clear()
-
-	var held_tiles: Array = []
-	for move in upcoming_gravity_moves:
-		var from_cell: Vector2i = move.get("from", Vector2i.ZERO)
-		var to_cell: Vector2i = move.get("to", Vector2i.ZERO)
-		hidden_cells[_cell_key(to_cell)] = true
-		var held_tile := AnimatedTile.new()
-		held_tile.tile_id = move.get("tile_id", "")
-		held_tile.position = _cell_position(from_cell)
-		animation_tiles.append(held_tile)
-		held_tiles.append(held_tile)
-		staged_movement_tiles[_cell_key(from_cell)] = held_tile
-
+	var clear_cells: Array[Vector2i] = []
 	var clear_tiles: Array = []
 	for cell_info in cells:
+		var cell: Vector2i = cell_info.get("cell", Vector2i.ZERO)
+		clear_cells.append(cell)
+		hidden_cells[_cell_key(cell)] = true
 		var animated_tile := AnimatedTile.new()
 		animated_tile.tile_id = cell_info.get("tile_id", "")
-		animated_tile.position = _cell_position(cell_info.get("cell", Vector2i.ZERO))
+		animated_tile.position = _cell_position(cell)
 		animation_tiles.append(animated_tile)
 		clear_tiles.append(animated_tile)
 	var tween := create_tween()
@@ -216,9 +207,10 @@ func _play_clear_animation(cells: Array, upcoming_gravity_moves: Array = []) -> 
 		tween.tween_property(animated_tile, "scale", 0.2, CLEAR_ANIMATION_TIME)
 		tween.tween_property(animated_tile, "alpha", 0.0, CLEAR_ANIMATION_TIME)
 	await tween.finished
-	animation_tiles = held_tiles
-	if held_tiles.is_empty():
-		hidden_cells.clear()
+	for cell in clear_cells:
+		_set_visual_tile_id(cell, null)
+	animation_tiles.clear()
+	hidden_cells.clear()
 	queue_redraw()
 
 func _play_movement_animation(moves: Array, duration: float) -> void:
@@ -226,25 +218,37 @@ func _play_movement_animation(moves: Array, duration: float) -> void:
 		return
 	animation_tiles.clear()
 	hidden_cells.clear()
+	var arrived_tiles: Array = []
 	var tween := create_tween()
 	tween.set_parallel(true)
 	for move in moves:
 		var from_cell: Vector2i = move.get("from", Vector2i.ZERO)
 		var target_cell: Vector2i = move.get("to", Vector2i.ZERO)
-		hidden_cells[_cell_key(target_cell)] = true
-		var from_key := _cell_key(from_cell)
-		var animated_tile: AnimatedTile = staged_movement_tiles.get(from_key, null)
-		if animated_tile == null:
-			animated_tile = AnimatedTile.new()
-			animated_tile.tile_id = move.get("tile_id", "")
-			animated_tile.position = _cell_position(from_cell)
-		staged_movement_tiles.erase(from_key)
+		var tile_id: String = move.get("tile_id", "")
+		if tile_id.is_empty() and _is_visual_cell(from_cell):
+			var existing = _get_visual_tile_id(from_cell)
+			tile_id = existing if existing != null else ""
+		if _is_visual_cell(from_cell):
+			_set_visual_tile_id(from_cell, null)
+			hidden_cells[_cell_key(from_cell)] = true
+		if _is_visual_cell(target_cell):
+			hidden_cells[_cell_key(target_cell)] = true
+		var animated_tile := AnimatedTile.new()
+		animated_tile.tile_id = tile_id
+		animated_tile.position = _cell_position(from_cell)
 		animation_tiles.append(animated_tile)
+		arrived_tiles.append({
+			"cell": target_cell,
+			"tile_id": tile_id,
+		})
 		tween.tween_property(animated_tile, "position", _cell_position(target_cell), duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	await tween.finished
+	for entry in arrived_tiles:
+		var cell: Vector2i = entry["cell"]
+		if _is_visual_cell(cell):
+			_set_visual_tile_id(cell, entry["tile_id"])
 	animation_tiles.clear()
 	hidden_cells.clear()
-	staged_movement_tiles.clear()
 	queue_redraw()
 
 func _draw_animated_tile(animated_tile: AnimatedTile) -> void:
@@ -269,6 +273,22 @@ func _tile_display_name(tile_id: String) -> String:
 		if definition.id == tile_id:
 			return definition.display_name
 	return tile_id.capitalize()
+
+func _sync_visual_tiles_from_board() -> void:
+	visual_tile_ids = board.serialize()
+
+func _is_visual_cell(cell: Vector2i) -> bool:
+	return cell.x >= 0 and cell.x < BOARD_WIDTH and cell.y >= 0 and cell.y < BOARD_HEIGHT
+
+func _get_visual_tile_id(cell: Vector2i):
+	if not _is_visual_cell(cell) or visual_tile_ids.is_empty():
+		return null
+	return visual_tile_ids[cell.y][cell.x]
+
+func _set_visual_tile_id(cell: Vector2i, tile_id) -> void:
+	if not _is_visual_cell(cell) or visual_tile_ids.is_empty():
+		return
+	visual_tile_ids[cell.y][cell.x] = tile_id
 
 func _set_status(text: String) -> void:
 	if is_animating and text != "Animating mine...":
