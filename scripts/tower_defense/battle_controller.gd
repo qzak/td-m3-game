@@ -42,6 +42,14 @@ var battle_over: bool = false
 var selected_adventurer_data: AdventurerData = null
 var placed_adventurer_ids: Dictionary = {}  # AdventurerData.id -> true, one copy of each allowed
 var adventurer_buttons: Dictionary = {}  # AdventurerData.id -> Button
+var spell_pickers: Dictionary = {}  # AdventurerData.id -> OptionButton (magic units with >=2 spells)
+var selected_spell_for: Dictionary = {}  # AdventurerData.id -> chosen spell id
+
+## Placement/repositioning is only allowed before the first wave and during between-wave breathers.
+var placement_open: bool = true
+## The already-placed unit currently being repositioned (picked up), or null.
+var picked_up_adventurer: TDAdventurer = null
+var picked_up_origin_cell: Vector2i = Vector2i.ZERO
 
 func _ready() -> void:
 	castle_hp = starting_castle_hp
@@ -125,6 +133,26 @@ func _build_placement_buttons() -> void:
 		placement_buttons_container.add_child(button)
 		adventurer_buttons[boosted.id] = button
 
+		_build_spell_picker(boosted)
+
+## For a magic adventurer with two or more spells, adds an OptionButton next to its Place button
+## so the player can choose which spell it will fight with before deploying it. The choice is
+## stored in selected_spell_for (def id -> spell id) and passed into the unit's setup() on placement.
+func _build_spell_picker(def: AdventurerData) -> void:
+	if def.type != AdventurerData.AdventurerType.MAGIC or def.spell_ids.size() < 2:
+		return
+	var picker := OptionButton.new()
+	for i in def.spell_ids.size():
+		var spell_id: String = def.spell_ids[i]
+		var spell: SpellData = load("res://data/adventurers/spells/%s.tres" % spell_id)
+		var label: String = spell.display_name if spell != null else spell_id
+		picker.add_item(label, i)
+	picker.select(0)
+	selected_spell_for[def.id] = def.spell_ids[0]
+	picker.item_selected.connect(func(index: int): selected_spell_for[def.id] = def.spell_ids[index])
+	placement_buttons_container.add_child(picker)
+	spell_pickers[def.id] = picker
+
 func _on_return_button_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/castle/castle.tscn")
 
@@ -144,10 +172,8 @@ func _on_start_button_pressed() -> void:
 func _begin_wave() -> void:
 	if not battle_started:
 		battle_started = true
-		for button in placement_buttons_container.get_children():
-			button.disabled = true
-		grid.clear_range_preview()
 		EventBus.day_started.emit(day_data.day_index)
+	_close_placement()
 
 	wave_active = true
 	auto_call_next = false
@@ -172,35 +198,101 @@ func _update_start_button_label() -> void:
 		start_button.disabled = false
 
 func _select_adventurer(data: AdventurerData) -> void:
+	if not placement_open:
+		return
 	# Each recruited adventurer is a unique individual, so only one copy can be on the field.
 	if placed_adventurer_ids.has(data.id):
 		return
+	# Picking a reserve to deploy cancels any in-progress reposition.
+	_cancel_pickup()
 	selected_adventurer_data = data
 	selected_label.text = 'Selected: %s (click a grid tile to place)' % data.display_name
 
 func _on_grid_cell_hovered(cell: Vector2i, valid: bool) -> void:
-	if battle_started or selected_adventurer_data == null or not valid:
+	if not placement_open or not valid:
 		grid.clear_range_preview()
 		return
-	grid.set_range_preview(cell, selected_adventurer_data.range_min, selected_adventurer_data.range_max)
+	var active := selected_adventurer_data
+	if active == null and picked_up_adventurer != null:
+		active = picked_up_adventurer.data
+	if active == null:
+		grid.clear_range_preview()
+		return
+	grid.set_range_preview(cell, active.range_min, active.range_max)
 
 func _on_grid_cell_clicked(cell: Vector2i) -> void:
-	if battle_started or selected_adventurer_data == null:
+	if not placement_open:
 		return
-	if not grid.is_buildable(cell):
-		return
-	var adventurer: TDAdventurer = ADVENTURER_SCENE.instantiate()
-	units_root.add_child(adventurer)
-	adventurer.setup(selected_adventurer_data, cell, grid.cell_to_world(cell))
-	grid.occupied_cells[cell] = adventurer
-	adventurers.append(adventurer)
 
-	placed_adventurer_ids[selected_adventurer_data.id] = true
-	if adventurer_buttons.has(selected_adventurer_data.id):
-		adventurer_buttons[selected_adventurer_data.id].disabled = true
+	# Placing a fresh reserve unit selected via a Place button.
+	if selected_adventurer_data != null:
+		if not grid.is_buildable(cell):
+			return
+		var adventurer: TDAdventurer = ADVENTURER_SCENE.instantiate()
+		units_root.add_child(adventurer)
+		var chosen_spell: String = selected_spell_for.get(selected_adventurer_data.id, "")
+		adventurer.setup(selected_adventurer_data, cell, grid.cell_to_world(cell), chosen_spell)
+		grid.occupied_cells[cell] = adventurer
+		adventurers.append(adventurer)
+
+		placed_adventurer_ids[selected_adventurer_data.id] = true
+		if adventurer_buttons.has(selected_adventurer_data.id):
+			adventurer_buttons[selected_adventurer_data.id].disabled = true
+		if spell_pickers.has(selected_adventurer_data.id):
+			spell_pickers[selected_adventurer_data.id].disabled = true
+		selected_adventurer_data = null
+		selected_label.text = "Selected: none"
+		grid.clear_range_preview()
+		return
+
+	# Dropping a picked-up unit onto a buildable cell (clicking its origin cancels the move).
+	if picked_up_adventurer != null:
+		if not grid.is_buildable(cell):
+			return
+		picked_up_adventurer.move_to(cell, grid.cell_to_world(cell))
+		grid.occupied_cells[cell] = picked_up_adventurer
+		picked_up_adventurer = null
+		selected_label.text = "Selected: none"
+		grid.clear_range_preview()
+		return
+
+	# Nothing selected: clicking a player-placed unit picks it up for repositioning.
+	# Towers live in reserved_cells (not occupied_cells), so they're never pickable.
+	if grid.occupied_cells.has(cell):
+		var unit: TDAdventurer = grid.occupied_cells[cell]
+		grid.occupied_cells.erase(cell)
+		picked_up_adventurer = unit
+		picked_up_origin_cell = cell
+		selected_label.text = "Moving %s (click a tile to move, or its own tile to cancel)" % unit.data.display_name
+		grid.set_range_preview(cell, unit.data.range_min, unit.data.range_max)
+
+## Opens the placement window (before the first wave, and during between-wave breathers),
+## re-enabling Place buttons for any roster members not already on the field.
+func _open_placement() -> void:
+	placement_open = true
+	for def_id: String in adventurer_buttons:
+		adventurer_buttons[def_id].disabled = placed_adventurer_ids.has(def_id)
+	for def_id: String in spell_pickers:
+		spell_pickers[def_id].disabled = placed_adventurer_ids.has(def_id)
+
+## Closes the placement window when a wave begins: returns any in-progress reposition to its
+## origin, clears the selection/preview, and disables all Place buttons.
+func _close_placement() -> void:
+	_cancel_pickup()
+	placement_open = false
 	selected_adventurer_data = null
 	selected_label.text = "Selected: none"
 	grid.clear_range_preview()
+	for button in placement_buttons_container.get_children():
+		button.disabled = true
+
+## Returns a picked-up unit to the cell it came from (used on cancel / when a wave starts).
+func _cancel_pickup() -> void:
+	if picked_up_adventurer == null:
+		return
+	picked_up_adventurer.move_to(picked_up_origin_cell, grid.cell_to_world(picked_up_origin_cell))
+	grid.occupied_cells[picked_up_origin_cell] = picked_up_adventurer
+	picked_up_adventurer = null
 
 func _on_step_timer_timeout() -> void:
 	if battle_over:
@@ -277,9 +369,8 @@ func _process_spawn_queue() -> void:
 
 func _attack_step() -> void:
 	for adventurer in adventurers:
-		var spell: SpellData = null
-		if adventurer.data.type == AdventurerData.AdventurerType.MAGIC and not adventurer.data.spell_ids.is_empty():
-			spell = load("res://data/adventurers/spells/%s.tres" % adventurer.data.spell_ids[0])
+		var spell: SpellData = _resolve_spell(adventurer)
+		var damage_multiplier: float = spell.damage_multiplier if spell != null else 1.0
 
 		if spell != null and spell.is_aoe:
 			while adventurer.can_attack():
@@ -289,7 +380,7 @@ func _attack_step() -> void:
 				adventurer.consume_pool()
 				var kills: Array[TDEnemy] = []
 				for target in targets.duplicate():
-					var dmg := int(randi_range(adventurer.data.damage_min, adventurer.data.damage_max) * spell.damage_multiplier)
+					var dmg := int(randi_range(adventurer.data.damage_min, adventurer.data.damage_max) * damage_multiplier)
 					if target.take_damage(dmg):
 						kills.append(target)
 				for kill in kills:
@@ -302,12 +393,24 @@ func _attack_step() -> void:
 				if target == null:
 					break
 				adventurer.consume_pool()
-				var dmg := randi_range(adventurer.data.damage_min, adventurer.data.damage_max)
+				var dmg := int(randi_range(adventurer.data.damage_min, adventurer.data.damage_max) * damage_multiplier)
 				if target.take_damage(dmg):
 					enemies.erase(target)
 					GameState.add_currency(target.data.bounty)
 					target.queue_free()
 	_check_end_conditions()
+
+## Resolves the spell a magic adventurer is currently fighting with (its selected spell, falling
+## back to the type's first spell). Returns null for non-magic units or those with no spells.
+func _resolve_spell(adventurer: TDAdventurer) -> SpellData:
+	if adventurer.data.type != AdventurerData.AdventurerType.MAGIC:
+		return null
+	var spell_id: String = adventurer.selected_spell_id
+	if spell_id == "":
+		if adventurer.data.spell_ids.is_empty():
+			return null
+		spell_id = adventurer.data.spell_ids[0]
+	return load("res://data/adventurers/spells/%s.tres" % spell_id)
 
 ## Targets the valid enemy furthest along the path (closest to the castle).
 func _find_target(adventurer: TDAdventurer) -> TDEnemy:
@@ -382,9 +485,11 @@ func _check_end_conditions() -> void:
 		EventBus.day_won.emit(day_data.day_index)
 	else:
 		# Field is clear and nothing is spawning — pause so adventurers stop gaining
-		# attack points until the player calls the next wave.
+		# attack points until the player calls the next wave, and re-open placement so the
+		# player can deploy reserves or reposition units during the breather.
 		step_timer.stop()
-		result_label.text = "Wave cleared — call the next wave when ready"
+		_open_placement()
+		result_label.text = "Wave cleared — place/move units, then call the next wave when ready"
 
 func _update_hud() -> void:
 	castle_hp_label.text = "Castle HP: %d" % castle_hp

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="DayData" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://data/waves/day_data.gd" id="1"]
+[ext_resource type="Script" path="res://data/waves/wave_data.gd" id="2"]
+[ext_resource type="Resource" path="res://data/waves/day3_wave1.tres" id="3"]
+[ext_resource type="Resource" path="res://data/waves/day3_wave2.tres" id="4"]
+[ext_resource type="Resource" path="res://data/waves/day3_wave3.tres" id="5"]
+[ext_resource type="Resource" path="res://data/waves/day3_wave4.tres" id="6"]
+[ext_resource type="Resource" path="res://data/waves/day3_wave5.tres" id="7"]
+[ext_resource type="Resource" path="res://data/waves/day3_wave6.tres" id="8"]
+
+[resource]
+script = ExtResource("1")
+day_index = 3
+waves = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])
+difficulty_scalar = 1.6
+completion_reward = 400

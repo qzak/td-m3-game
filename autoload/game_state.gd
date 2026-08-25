@@ -35,6 +35,7 @@ var unlocked_day_index: int = 1
 var selected_day_index: int = 1
 var mine_depth: int = 0
 var mine_board_state: Array = []
+var _total_known_days_cache: int = -1  # -1 = not yet computed
 
 func _ready() -> void:
 	EventBus.day_started.connect(func(_idx): tavern_reroll_count = 0)
@@ -44,7 +45,44 @@ func _on_day_won(day_index: int) -> void:
 	unlocked_day_index = maxi(unlocked_day_index, day_index + 1)
 
 func total_known_days() -> int:
-	return 2
+	# Return cached value if already computed
+	if _total_known_days_cache >= 0:
+		return _total_known_days_cache
+	
+	# Scan res://data/waves/ for day_<n>.tres files
+	var dir: DirAccess = DirAccess.open("res://data/waves")
+	if dir == null:
+		_total_known_days_cache = 1
+		return 1
+	
+	# Use a regex to match day_<number>.tres pattern exactly
+	var regex := RegEx.new()
+	regex.compile("^day_([0-9]+)\\.tres(\\.remap)?$")
+	
+	var found_days: Dictionary = {}  # n -> true
+	var files: PackedStringArray = dir.get_files()
+	
+	for file_name: String in files:
+		var result: RegExMatch = regex.search(file_name)
+		if result:
+			var n_str: String = result.get_string(1)
+			var n: int = int(n_str)
+			found_days[n] = true
+	
+	# Find highest contiguous n starting at 1
+	var max_contiguous: int = 0
+	for i in range(1, 1000):  # reasonable upper limit
+		if found_days.has(i):
+			max_contiguous = i
+		else:
+			break  # stop at first gap
+	
+	# Fall back to 1 if none found
+	if max_contiguous == 0:
+		max_contiguous = 1
+	
+	_total_known_days_cache = max_contiguous
+	return _total_known_days_cache
 
 func add_currency(amount: int) -> void:
 	currency += amount

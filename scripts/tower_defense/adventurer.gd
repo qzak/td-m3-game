@@ -6,16 +6,26 @@ var data: AdventurerData
 var cell: Vector2i
 var attack_pool_current: int = 0
 var stunned_steps_remaining: int = 0
+var selected_spell_id: String = ""  # chosen spell for MAGIC units; "" = use the type's default
 
 @onready var pool_label: Label = $PoolLabel
 
-func setup(p_data: AdventurerData, p_cell: Vector2i, world_pos: Vector2) -> void:
+func setup(p_data: AdventurerData, p_cell: Vector2i, world_pos: Vector2, p_spell_id: String = "") -> void:
 	data = p_data
 	cell = p_cell
 	position = world_pos
 	attack_pool_current = 0
 	stunned_steps_remaining = 0
+	selected_spell_id = p_spell_id
+	if selected_spell_id == "" and not data.spell_ids.is_empty():
+		selected_spell_id = data.spell_ids[0]
 	_update_label()
+
+## Repositions the unit to a new cell without touching its charge/stun state
+## (used for mid-battle repositioning during between-wave breathers).
+func move_to(p_cell: Vector2i, world_pos: Vector2) -> void:
+	cell = p_cell
+	position = world_pos
 
 func regen() -> void:
 	attack_pool_current += data.attack_regen

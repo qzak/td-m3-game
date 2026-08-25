@@ -151,21 +151,21 @@ Each building is a scene with a shared `BuildingBase` (level, upgrade cost looku
 4. **Castle Hub Minimal** — Quarters (select roster) + Tavern (sign contracts) wired to `GameState`, enough to feed adventurers into TD. ✅ Done.
 5. **Match-3 Mine** — board, matching, descend mechanic, material rewards feeding into `GameState`. ✅ Done.
 6. **Remaining Buildings** — Smelter (timed queue), Armour/Weapon Smith (crafting), Armoury (capacity), building upgrade UI generalized via `BuildingData`. ✅ Done — see [docs/systems/castle.md](systems/castle.md) (Smelter/Weapon Smith/Armour Smith/Armoury/Building Upgrades sections) and [docs/systems/tower_defense.md](systems/tower_defense.md#equipment-bonuses) for how equipped items now affect TD combat stats.
-7. **Day/Wave Content & Progression** — multiple Days with `WaveData`, difficulty scaling, replay support. 🟡 In progress — Day 1 + Day 2 exist, Castle Day-selection UI and `unlocked_day_index` progression are wired (see [docs/systems/tower_defense.md](systems/tower_defense.md#day-selection)); still needs dynamic Day discovery (`total_known_days()` is hardcoded) and more Days beyond 2.
+7. **Day/Wave Content & Progression** — multiple Days with `WaveData`, difficulty scaling, replay support. ✅ Done — Days 1–3 exist, dynamic Day discovery (`GameState.total_known_days()` scans `data/waves/day_*.tres`), Castle Day-selection UI and `unlocked_day_index` progression are all wired (see [docs/systems/tower_defense.md](systems/tower_defense.md#day-selection)). Authoring further Days is now data-only.
 8. **Polish** — save/load robustness, mobile UI/touch input, audio/VFX, balancing pass.
 
 ## 8. Next Immediate Steps
 
-Milestones 1–6 are complete; Milestone 7 is underway (see [docs/systems/](systems/) for as-built
-details). Remaining for Milestone 7 / next up:
+Milestones 1–7 are complete (see [docs/systems/](systems/) for as-built details). Recently landed:
+dynamic Day discovery + Day 3, the Mage's second spell (`arcane_bolt`) with a pre-placement
+spell-selection UI, and mid-battle reinforcement + repositioning during between-wave breathers.
+Remaining / next up:
 
-1. Make `GameState.total_known_days()` dynamic (e.g. scan `data/waves/day_*.tres`) instead of a
-   hardcoded `2`, so authoring a new Day doesn't require a code change too.
-2. Author Day 3+ with further difficulty scaling and any new enemy types/abilities.
-3. Give the Mage more than one spell and a way to pick between them (see
-   [docs/systems/tower_defense.md](systems/tower_defense.md#mage-spellcasting) — today it's a single
-   hardcoded AOE Fireball).
-4. Consider revisiting mid-battle placement (see [docs/systems/tower_defense.md](systems/tower_defense.md#known-limitations--next-up))
-   now that there's breathing room between waves.
-5. Mine pacing (move limit/timer) is still an open, lower-priority idea from the original design doc
+1. Author Day 4+ (data-only now) and continue the difficulty curve — possibly introduce new enemy
+   types/abilities to keep it fresh.
+2. Allow switching an already-placed Mage's spell mid-battle (today the spell is chosen only at
+   placement — see [docs/systems/tower_defense.md](systems/tower_defense.md#mage-spellcasting)).
+3. Add more spells (e.g. a slow/utility spell) now that multi-spell + selection exists.
+4. Mine pacing (move limit/timer) is still an open, lower-priority idea from the original design doc
    — no fail state is intended, just pacing.
+5. Milestone 8 polish: save/load robustness, mobile UI/touch input, audio/VFX, balancing pass.

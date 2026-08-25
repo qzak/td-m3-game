@@ -107,11 +107,15 @@ The timer isn't running continuously for the whole Day, though — see below.
 - [data/waves/day_2.tres](../../data/waves/day_2.tres) is a harder second Day (`difficulty_scalar =
   1.3`, `completion_reward = 250`): goblins, then Goblin Riders, then Goblin Shamans, then Large
   Goblins, then a fast 8-strong Goblin Rider finale wave (1-step spacing).
+- [data/waves/day_3.tres](../../data/waves/day_3.tres) is a third Day (`difficulty_scalar = 1.6`,
+  `completion_reward = 400`) with six waves that reuse the existing goblin roster on a rising curve:
+  goblins → Goblin Riders → Goblin Shamans → a tight 10-strong Goblin Rider swarm (1-step spacing)
+  → more Shamans → a 6-strong Large Goblin finale.
 
 ## Day Selection
 
 - The Castle no longer hardcodes "Start Day 1" — `CastleController._build_day_list()` builds one
-  "Start Day N" button per day from `1` to `GameState.total_known_days()` (currently `2`), disabling
+  "Start Day N" button per day from `1` to `GameState.total_known_days()`, disabling
   and appending `" (Locked)"` to any day beyond `GameState.unlocked_day_index`.
 - Pressing an unlocked day button sets `GameState.selected_day_index = N` then changes to
   `td_battle.tscn`. `TDBattleController._ready()` checks `GameState.selected_day_index` before
@@ -123,13 +127,25 @@ The timer isn't running continuously for the whole Day, though — see below.
   `day_index + 1` whenever `EventBus.day_won` fires, via a listener registered in
   `GameState._ready()` — so clearing Day 1 unlocks Day 2, etc. There's no Day-replay restriction;
   clearing a Day again just re-fires the same unlock logic (`maxi`, so it never regresses).
-- `GameState.total_known_days()` is currently a hardcoded `2` — it'll need to become dynamic (e.g.
-  scanning `data/waves/day_*.tres`) once more Days are authored.
+- `GameState.total_known_days()` is now **dynamic**: it scans `res://data/waves/` for files matching
+  `day_<n>.tres` (via a `RegEx`, tolerant of a trailing `.remap` in exported builds) and returns the
+  highest *contiguous* `n` starting at `1` (stopping at the first gap; falls back to `1` if none are
+  found). The result is cached in `_total_known_days_cache` so the disk scan only happens once.
+  Authoring a new `day_<n>.tres` (with its waves) is therefore all it takes to add a Day — no code
+  change. Currently Days 1–3 exist, so it returns `3`.
 
-## Placement & Range Preview
+## Placement, Reinforcement & Range Preview
 
-- Before the first wave is called, clicking one of the dynamically-built **Place X** buttons (one
-  per adventurer in `GameState.active_roster_ids`, chosen in the Castle's Quarters — see
+- Placement/repositioning is gated by a `placement_open` flag (replacing the old
+  `battle_started`-only gate). It is open **before the first wave** and re-opens during every
+  **between-wave breather** (`_check_end_conditions()`'s "Wave cleared" branch, when the field is
+  clear, no wave is spawning, and more waves remain). It is closed while a wave is spawning, while
+  enemies are on the field, and once the Day ends. `_begin_wave()` calls `_close_placement()` (which
+  disables all placement controls, clears any selection/preview, and returns an in-progress
+  reposition to its origin); the breather branch calls `_open_placement()` (which re-enables the
+  Place buttons/spell pickers only for roster members **not already placed**).
+- Before/between waves, clicking one of the dynamically-built **Place X** buttons (one per
+  adventurer in `GameState.active_roster_ids`, chosen in the Castle's Quarters — see
   [docs/systems/castle.md](castle.md)) sets `selected_adventurer_data` and updates the
   `SelectedLabel` HUD text.
 - While a unit type is selected, moving the mouse over the grid emits `TDGridMap.cell_hovered`,
@@ -141,7 +157,16 @@ The timer isn't running continuously for the whole Day, though — see below.
   cell occupied. Each adventurer represents a unique recruited individual, so only one copy of
   a given adventurer (`AdventurerData.id`) can be placed at a time — `TDBattleController` tracks
   `placed_adventurer_ids` and disables that unit's placement button once it's on the field.
-  There's still no overall roster/slot cap yet (that comes with the Castle's Quarters system).
+- **Reinforcements:** because the window re-opens between waves, a reserve roster member that
+  wasn't deployed earlier can be placed during any breather — the Place buttons for un-placed units
+  are re-enabled by `_open_placement()`.
+- **Repositioning:** while `placement_open` and nothing is selected for placement, clicking an
+  occupied cell that holds one of the player's placed adventurers "picks it up" —
+  `grid.occupied_cells` frees that cell, the unit becomes `picked_up_adventurer`, and the range
+  preview follows the cursor. The next click on a buildable cell drops it there via
+  `TDAdventurer.move_to()` (which preserves attack-pool/stun charge — it is not a fresh `setup()`);
+  clicking the unit's own origin cell drops it back unchanged (a natural cancel). Towers live in
+  `reserved_cells` (never `occupied_cells`), so they are never pickable, and repositioning is free.
 
 ## Adventurer Roster (current)
 
@@ -162,20 +187,30 @@ roster is recruited (Tavern) and selected (Quarters) before a battle.
 
 - `AdventurerData.spell_ids` (only meaningful for `type == MAGIC`) references `SpellData` resources
   at `res://data/adventurers/spells/<id>.tres` (`SpellData`: `id`, `display_name`, `is_aoe: bool`,
-  `damage_multiplier: float`). The Mage's only spell today is `fireball` (`is_aoe = true`,
-  `damage_multiplier = 0.6`).
-- In `_attack_step()`, a magic adventurer with a non-empty `spell_ids` whose first spell has
-  `is_aoe = true` hits **every** enemy `_find_targets_in_range()` finds in one go instead of
-  picking a single target via `_find_target()` — each hit rolls `damage_min..damage_max` normally
-  and then multiplies by `damage_multiplier` (lower than 1.0 to offset hitting multiple enemies at
-  once). The attack pool is still only consumed once per attack tick, same as a single-target hit.
-  Kills are collected during the AOE sweep and removed/bountied/freed afterward (not mid-iteration)
-  to avoid mutating the `enemies` array while scanning it.
-- Non-magic adventurers, and any magic adventurer without an AOE spell configured, are completely
-  unaffected — they keep using the original single-target `_find_target()` path. Towers also use
-  the single-target path (they have no `spell_ids`).
-- Only one spell per adventurer is supported today (`spell_ids[0]`) — there's no spell-selection UI
-  or spell-switching mid-battle yet.
+  `damage_multiplier: float`). The Mage now knows **two** spells: `fireball` (`is_aoe = true`,
+  `damage_multiplier = 0.6` — hits everything in range for reduced per-hit damage) and `arcane_bolt`
+  (`is_aoe = false`, `damage_multiplier = 1.6` — a single-target nuke).
+- **Spell selection UI:** for any roster entry that is `MAGIC`-type with two or more spells,
+  `_build_placement_buttons()` calls `_build_spell_picker()`, which adds an `OptionButton` next to
+  that unit's Place button listing each spell's `display_name`. The choice is stored in
+  `selected_spell_for` (def id → spell id, defaulting to the first spell) and passed into the unit's
+  `setup(..., chosen_spell)` when it's placed; the picker is disabled once the unit is deployed and
+  re-enabled between waves only while the unit is still un-placed. The spell is chosen
+  pre-placement — there's no mid-battle spell-switching on an already-placed unit.
+- Each placed `TDAdventurer` stores its `selected_spell_id` (falling back to `spell_ids[0]` when
+  none was passed). In `_attack_step()`, `_resolve_spell()` loads that unit's selected spell (or
+  `null` for non-magic units / units with no spells), and its `damage_multiplier` is now applied in
+  **both** attack paths:
+  - **AOE spell** (`is_aoe = true`): the adventurer hits **every** enemy `_find_targets_in_range()`
+    finds in one go — each hit rolls `damage_min..damage_max` and multiplies by the spell's
+    multiplier. Kills are collected during the sweep and removed/bountied/freed afterward (not
+    mid-iteration) to avoid mutating the `enemies` array while scanning it.
+  - **Single-target spell** (or a non-magic unit, where the multiplier is `1.0`): the adventurer
+    picks one target via `_find_target()` and its damage is multiplied by the resolved multiplier
+    (so `arcane_bolt` deals `1.6×`, while a plain physical attacker is unchanged at `1.0×`).
+  The attack pool is still only consumed once per attack tick in either path.
+- Towers use the single-target path (they have no `spell_ids`, so `_resolve_spell()` returns `null`
+  and the multiplier is `1.0`).
 
 ## Equipment Bonuses
 
@@ -210,10 +245,11 @@ roster is recruited (Tavern) and selected (Quarters) before a battle.
 
 ## Known Limitations / Next Up
 
-- Mage only has one hardcoded AOE spell (Fireball) with no selection UI or alternate spells yet —
-  see [Mage Spellcasting](#mage-spellcasting).
-- No new placements allowed between waves once the day has started (only before the first
-  wave) — might be worth revisiting since real breathing room exists between waves now.
-- Only Days 1–2 exist and `GameState.total_known_days()` is hardcoded — no dynamic Day discovery,
-  and no further difficulty curve beyond Day 2 yet.
+- The Mage's spell is chosen pre-placement via the TD spell picker — there's still no way to switch
+  an *already-placed* unit's spell mid-battle (see [Mage Spellcasting](#mage-spellcasting)).
+- Reinforcement and repositioning are now allowed during between-wave breathers (see
+  [Placement, Reinforcement & Range Preview](#placement-reinforcement--range-preview)), but not
+  while a wave is actively spawning or enemies are on the field.
+- Days 1–3 exist and `GameState.total_known_days()` now discovers them dynamically — authoring
+  further Days is data-only, though the difficulty curve beyond Day 3 is still open.
 
