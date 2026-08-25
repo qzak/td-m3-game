@@ -69,3 +69,50 @@ If a scene/system behavior was changed, also run that flow in editor when possib
 - No obvious regressions in touched gameplay loop.
 - Related system docs updated when behavior changes.
 - Changes remain consistent with data-driven architecture.
+
+## Delegation Template (For Orchestrator Agents)
+
+Use this prompt format when delegating implementation slices to subagents.
+
+```text
+Task: <one concrete outcome>
+
+Context to read first:
+- AGENTS.md
+- docs/IMPLEMENTATION_PLAN.md
+- docs/systems/<relevant-system>.md
+
+Scope boundaries:
+- In scope: <explicit files/systems>
+- Out of scope: <what must not be touched>
+- Save compatibility: <required/not required>
+
+Implementation requirements:
+- Keep edits minimal and localized.
+- Prefer data-driven updates in data/*.tres when possible.
+- Keep EventBus signals/public method contracts stable unless all callers are updated.
+
+Deliverables:
+- Code changes implementing <feature/fix>.
+- Docs update in docs/systems/<file>.md if behavior changed.
+- Short summary of gameplay impact.
+
+Validation required:
+1) Run:
+  godot --headless --path "D:\td-m3-game" --check-only --quit
+2) Smoke-test relevant flow:
+  - Castle / TD / Match-3 (pick what applies)
+3) Report exact checks performed and result.
+
+Output format:
+1) Assumptions made.
+2) Files changed.
+3) Risks/regressions to watch.
+4) Validation results.
+```
+
+Recommended usage:
+
+- Use one template per sub-task, not one giant prompt.
+- Keep each delegated task to one system unless cross-system coupling is required.
+- For high-risk changes (save schema, battle loop timing, progression economy), prefer stronger reasoning models.
