@@ -28,3 +28,16 @@ button and returns through `Return to Castle`.
   adds its material directly through `GameState.add_material()` and emits
   `EventBus.mine_match_resolved`.
 - Garbage tiles are dirt, stone, and clay. They have no material reward and primarily clear space.
+
+## Animation & Input Locking
+
+- `MineBoard` emits ordered animation events and `MineController` plays them as a queue, so match
+  resolution always appears as **clear → gravity**, repeating for cascades.
+- **Clear** animation: matched tiles shrink and fade (`0.18s`) before the next step.
+- **Gravity** animation: moved tiles slide to their compacted row (`0.22s`), with destination cells
+  hidden until tweens complete to avoid double-draw artifacts.
+- **Descend** animation: shifted rows and newly spawned bottom rows animate together as one move pass
+  (`0.30s`), then depth/status text updates.
+- While any animation is running, board input is hard-gated (`_unhandled_input` early return),
+  `Descend` is disabled, active selection is cleared, and status is pinned to `Animating mine...`.
+  Deferred status text (for example `New layer opened`) is shown after the queue finishes.

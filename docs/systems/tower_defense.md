@@ -46,6 +46,8 @@ alternates:
   valid in-range enemy furthest along the path (closest to the castle) and attacks, looping so
   a large regen can trigger multiple attacks in one step. Damage is
   `randi_range(damage_min, damage_max) - enemy.armour` (floored at 0).
+  Attack visuals fire per hit (melee swing or ranged projectile/impact), and kills are removed
+  from simulation immediately before their death tween finishes on-screen.
 
 Win condition: no enemies left alive and no wave left to call. Loss condition: castle HP
 hits 0. Both stop the timer and set `battle_over`.
@@ -65,6 +67,9 @@ The timer isn't running continuously for the whole Day, though — see below.
   enemies — `2` means it only moves on every other move step). `TDEnemy.move_cooldown` tracks
   this: `apply_move()` ticks it down and skips movement entirely while it's `> 0`, regardless of
   blocking.
+- Enemy traversal uses a short hop presentation (`HOP_DURATION = 0.22`, `HOP_HEIGHT = 10`):
+  movement tweens through an elevated midpoint while the body briefly squash-stretches, but
+  path/blocking logic still resolves from discrete path cells.
 
 ## Enemy Roster (current)
 
@@ -183,6 +188,16 @@ and can't hit anything adjacent to it. The Berserker hits hardest but has the sl
 (lowest `attack_regen`) of any adventurer. See [docs/systems/castle.md](castle.md) for how the
 roster is recruited (Tavern) and selected (Quarters) before a battle.
 
+## Combat Animation Details
+
+- **Melee (`PHYSICAL_MELEE`)**: attacker performs a quick rotation jab plus a small body squash,
+  then spawns a short orange impact flash at the target.
+- **Ranged (including MAGIC and towers)**: a yellow projectile polygon travels attacker→target,
+  then spawns a gold impact flash on contact.
+- **Enemy death lifecycle**: `play_death_animation()` hides the HP label, runs a squash/tilt/fade
+  tween (~0.2s), then `queue_free`s. The enemy is already removed from the `enemies` array when
+  this starts, so it no longer blocks movement or receives targeting.
+
 ## Mage Spellcasting
 
 - `AdventurerData.spell_ids` (only meaningful for `type == MAGIC`) references `SpellData` resources
@@ -252,4 +267,3 @@ roster is recruited (Tavern) and selected (Quarters) before a battle.
   while a wave is actively spawning or enemies are on the field.
 - Days 1–3 exist and `GameState.total_known_days()` now discovers them dynamically — authoring
   further Days is data-only, though the difficulty curve beyond Day 3 is still open.
-

@@ -380,25 +380,34 @@ func _attack_step() -> void:
 				adventurer.consume_pool()
 				var kills: Array[TDEnemy] = []
 				for target in targets.duplicate():
+					_play_attack_visual(adventurer, target)
 					var dmg := int(randi_range(adventurer.data.damage_min, adventurer.data.damage_max) * damage_multiplier)
 					if target.take_damage(dmg):
 						kills.append(target)
 				for kill in kills:
 					enemies.erase(kill)
 					GameState.add_currency(kill.data.bounty)
-					kill.queue_free()
+					kill.play_death_animation()
 		else:
 			while adventurer.can_attack():
 				var target := _find_target(adventurer)
 				if target == null:
 					break
 				adventurer.consume_pool()
+				_play_attack_visual(adventurer, target)
 				var dmg := int(randi_range(adventurer.data.damage_min, adventurer.data.damage_max) * damage_multiplier)
 				if target.take_damage(dmg):
 					enemies.erase(target)
 					GameState.add_currency(target.data.bounty)
-					target.queue_free()
+					target.play_death_animation()
 	_check_end_conditions()
+
+func _play_attack_visual(adventurer: TDAdventurer, target: TDEnemy) -> void:
+	match adventurer.data.type:
+		AdventurerData.AdventurerType.PHYSICAL_MELEE:
+			adventurer.play_melee_attack(target.position)
+		_:
+			adventurer.play_ranged_attack(target.position)
 
 ## Resolves the spell a magic adventurer is currently fighting with (its selected spell, falling
 ## back to the type's first spell). Returns null for non-magic units or those with no spells.

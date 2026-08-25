@@ -10,6 +10,7 @@ const DESCENT_ROWS := 5
 signal match_resolved(rewards: Dictionary)
 signal depth_advanced(new_depth: int)
 signal board_changed
+signal animation_event(event: Dictionary)
 
 var depth: int = 0
 var tiles: Array = []
@@ -97,7 +98,12 @@ func try_move_to_empty(source: Vector2i, destination: Vector2i) -> bool:
 		return false
 	tiles[destination.y][destination.x] = tile
 	tiles[source.y][source.x] = null
-	_apply_gravity()
+	var gravity_moves := _apply_gravity()
+	if not gravity_moves.is_empty():
+		animation_event.emit({
+			"type": "gravity",
+			"moves": gravity_moves,
+		})
 	if not solver.find_matches(tiles, WIDTH, HEIGHT).is_empty():
 		_resolve_matches()
 	else:
@@ -110,24 +116,48 @@ func _resolve_matches() -> void:
 		var matches := solver.find_matches(tiles, WIDTH, HEIGHT)
 		if matches.is_empty():
 			break
+		var cleared_cells: Array = []
 		for cell in matches:
 			var tile = tiles[cell.y][cell.x]
 			if tile != null and not tile.reward_material_id.is_empty():
 				rewards[tile.reward_material_id] = rewards.get(tile.reward_material_id, 0) + tile.reward_amount
+			if tile != null:
+				cleared_cells.append({
+					"cell": cell,
+					"tile_id": tile.id,
+				})
 			tiles[cell.y][cell.x] = null
-		_apply_gravity()
+		if not cleared_cells.is_empty():
+			animation_event.emit({
+				"type": "clear",
+				"cells": cleared_cells,
+			})
+		var gravity_moves := _apply_gravity()
+		if not gravity_moves.is_empty():
+			animation_event.emit({
+				"type": "gravity",
+				"moves": gravity_moves,
+			})
 	match_resolved.emit(rewards)
 	board_changed.emit()
 
-func _apply_gravity() -> void:
+func _apply_gravity() -> Array:
+	var moves: Array = []
 	for x in range(WIDTH):
 		var write_y := HEIGHT - 1
 		for y in range(HEIGHT - 1, -1, -1):
 			if tiles[y][x] != null:
+				var tile = tiles[y][x]
 				tiles[write_y][x] = tiles[y][x]
 				if write_y != y:
 					tiles[y][x] = null
+					moves.append({
+						"from": Vector2i(x, y),
+						"to": Vector2i(x, write_y),
+						"tile_id": tile.id,
+					})
 				write_y -= 1
+	return moves
 
 func _top_rows_are_empty() -> bool:
 	for y in range(DESCENT_ROWS):
@@ -142,12 +172,33 @@ func can_descend() -> bool:
 func descend() -> bool:
 	if not can_descend():
 		return false
+	var shifted_tiles: Array = []
 	for y in range(HEIGHT - DESCENT_ROWS):
 		for x in range(WIDTH):
+			var shifted_tile = tiles[y + DESCENT_ROWS][x]
+			if shifted_tile != null:
+				shifted_tiles.append({
+					"from": Vector2i(x, y + DESCENT_ROWS),
+					"to": Vector2i(x, y),
+					"tile_id": shifted_tile.id,
+				})
 			tiles[y][x] = tiles[y + DESCENT_ROWS][x]
+	var spawned_tiles: Array = []
 	for y in range(HEIGHT - DESCENT_ROWS, HEIGHT):
 		for x in range(WIDTH):
 			tiles[y][x] = _new_random_tile(Vector2i(x, y))
+			if tiles[y][x] != null:
+				spawned_tiles.append({
+					"from": Vector2i(x, y + DESCENT_ROWS),
+					"to": Vector2i(x, y),
+					"tile_id": tiles[y][x].id,
+				})
+	animation_event.emit({
+		"type": "descend",
+		"moves": shifted_tiles,
+		"spawns": spawned_tiles,
+		"rows": DESCENT_ROWS,
+	})
 	depth += 1
 	depth_advanced.emit(depth)
 	board_changed.emit()
