@@ -61,7 +61,11 @@ func play_ranged_attack(target_position: Vector2) -> void:
 		return
 	var projectile := Polygon2D.new()
 	projectile.color = Color(1.0, 0.9, 0.2, 1.0)
-	projectile.polygon = PackedVector2Array(-4, -2, 4, 0, -4, 2)
+	projectile.polygon = PackedVector2Array([
+		Vector2(-4, -2),
+		Vector2(4, 0),
+		Vector2(-4, 2),
+	])
 	projectile.position = position
 	projectile.rotation = (target_position - position).angle()
 	host.add_child(projectile)
@@ -93,7 +97,12 @@ func _spawn_impact(target_position: Vector2, color: Color) -> void:
 		return
 	var impact := Polygon2D.new()
 	impact.color = color
-	impact.polygon = PackedVector2Array(0, -7, 7, 0, 0, 7, -7, 0)
+	impact.polygon = PackedVector2Array([
+		Vector2(0, -7),
+		Vector2(7, 0),
+		Vector2(0, 7),
+		Vector2(-7, 0),
+	])
 	impact.position = target_position
 	host.add_child(impact)
 	var impact_tween := create_tween()
