@@ -1,6 +1,6 @@
 # TD + Match-3 + RPG — Implementation Plan
 
-Based on the attached design doc. Target engine: Godot 4.6 (Mobile renderer, already configured).
+Based on the attached design doc. Target engine: Godot 4.7 (Mobile renderer, already configured).
 
 > As each system gets built, its actual (as-built) behavior is documented under
 > [docs/systems/](systems/) — check there for up-to-date implementation details rather than
