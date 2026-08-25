@@ -8,6 +8,14 @@ This file helps coding agents get productive quickly in this repository.
 - Game pillars: Castle hub, Tower Defense battle, Match-3 mine.
 - Data-first approach: gameplay content is mostly defined in `.tres` resources under `data/`.
 
+## Visual Direction (Important)
+
+- Target style: pixel-art fantasy adventure world with a cozy, readable, handcrafted look.
+- Palette direction: warm, natural, slightly muted colors similar to the feel of Stardew Valley (earthy greens, browns, soft blues, warm highlights).
+- Asset generation rule: prefer grounded medieval-adventure motifs (wood, stone, cloth, iron, lantern light, farmland/forest accents) over sci-fi or high-saturation neon styles.
+- UI generation rule: keep pixel-friendly shapes and spacing, avoid ultra-modern glossy UI language, and favor legibility at small resolutions.
+- Consistency rule: when proposing new visuals, describe how they match existing palette and tone before suggesting alternatives.
+
 ## Start Here (Reading Order)
 
 1. `docs/IMPLEMENTATION_PLAN.md` for the overall architecture and milestone status.

@@ -12,6 +12,14 @@ Use this repo context when answering or editing code.
 - Shared state/autoloads: `autoload/game_state.gd`, `autoload/save_manager.gd`, `autoload/event_bus.gd`.
 - Data-driven gameplay content lives in `data/**/*.tres`.
 
+## Visual Direction (Important)
+
+- Target style: pixel-art fantasy adventure world with a cozy, readable, handcrafted look.
+- Palette direction: warm, natural, slightly muted colors similar to Stardew Valley (earthy greens, browns, soft blues, warm highlights).
+- For generated assets/UI ideas, favor medieval-adventure materials and motifs (wood, stone, cloth, iron, lantern light, village/farm/forest tones).
+- Avoid styles that clash with the target (neon sci-fi, hyper-glossy UI, overly realistic rendering).
+- Keep UI and icon suggestions pixel-friendly and legible at small resolutions.
+
 ## Read First
 
 1. `AGENTS.md`
