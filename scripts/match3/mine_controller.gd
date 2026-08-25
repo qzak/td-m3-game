@@ -37,6 +37,7 @@ var is_animating := false
 var animation_queue: Array = []
 var animation_tiles: Array = []
 var hidden_cells: Dictionary = {}
+var staged_movement_tiles: Dictionary = {}
 var post_animation_status := ""
 var definitions: Array = [
 	preload("res://data/tiles/dirt.tres"),
@@ -159,7 +160,12 @@ func _play_animation_queue() -> void:
 		var event: Dictionary = animation_queue.pop_front()
 		match event.get("type", ""):
 			"clear":
-				await _play_clear_animation(event.get("cells", []))
+				var upcoming_gravity_moves: Array = []
+				if not animation_queue.is_empty():
+					var next_event: Dictionary = animation_queue[0]
+					if next_event.get("type", "") == "gravity":
+						upcoming_gravity_moves = next_event.get("moves", [])
+				await _play_clear_animation(event.get("cells", []), upcoming_gravity_moves)
 			"gravity":
 				await _play_movement_animation(event.get("moves", []), GRAVITY_ANIMATION_TIME)
 			"descend":
@@ -168,6 +174,7 @@ func _play_animation_queue() -> void:
 				await _play_movement_animation(descend_moves, DESCEND_ANIMATION_TIME)
 	hidden_cells.clear()
 	animation_tiles.clear()
+	staged_movement_tiles.clear()
 	is_animating = false
 	_update_hud()
 	if not post_animation_status.is_empty():
@@ -177,22 +184,41 @@ func _play_animation_queue() -> void:
 		_set_status("Select a tile or empty space in this row")
 	queue_redraw()
 
-func _play_clear_animation(cells: Array) -> void:
+func _play_clear_animation(cells: Array, upcoming_gravity_moves: Array = []) -> void:
 	if cells.is_empty():
 		return
 	animation_tiles.clear()
+	hidden_cells.clear()
+	staged_movement_tiles.clear()
+
+	var held_tiles: Array = []
+	for move in upcoming_gravity_moves:
+		var from_cell: Vector2i = move.get("from", Vector2i.ZERO)
+		var to_cell: Vector2i = move.get("to", Vector2i.ZERO)
+		hidden_cells[_cell_key(to_cell)] = true
+		var held_tile := AnimatedTile.new()
+		held_tile.tile_id = move.get("tile_id", "")
+		held_tile.position = _cell_position(from_cell)
+		animation_tiles.append(held_tile)
+		held_tiles.append(held_tile)
+		staged_movement_tiles[_cell_key(from_cell)] = held_tile
+
+	var clear_tiles: Array = []
 	for cell_info in cells:
 		var animated_tile := AnimatedTile.new()
 		animated_tile.tile_id = cell_info.get("tile_id", "")
 		animated_tile.position = _cell_position(cell_info.get("cell", Vector2i.ZERO))
 		animation_tiles.append(animated_tile)
+		clear_tiles.append(animated_tile)
 	var tween := create_tween()
 	tween.set_parallel(true)
-	for animated_tile in animation_tiles:
+	for animated_tile in clear_tiles:
 		tween.tween_property(animated_tile, "scale", 0.2, CLEAR_ANIMATION_TIME)
 		tween.tween_property(animated_tile, "alpha", 0.0, CLEAR_ANIMATION_TIME)
 	await tween.finished
-	animation_tiles.clear()
+	animation_tiles = held_tiles
+	if held_tiles.is_empty():
+		hidden_cells.clear()
 	queue_redraw()
 
 func _play_movement_animation(moves: Array, duration: float) -> void:
@@ -203,16 +229,22 @@ func _play_movement_animation(moves: Array, duration: float) -> void:
 	var tween := create_tween()
 	tween.set_parallel(true)
 	for move in moves:
+		var from_cell: Vector2i = move.get("from", Vector2i.ZERO)
 		var target_cell: Vector2i = move.get("to", Vector2i.ZERO)
 		hidden_cells[_cell_key(target_cell)] = true
-		var animated_tile := AnimatedTile.new()
-		animated_tile.tile_id = move.get("tile_id", "")
-		animated_tile.position = _cell_position(move.get("from", Vector2i.ZERO))
+		var from_key := _cell_key(from_cell)
+		var animated_tile: AnimatedTile = staged_movement_tiles.get(from_key, null)
+		if animated_tile == null:
+			animated_tile = AnimatedTile.new()
+			animated_tile.tile_id = move.get("tile_id", "")
+			animated_tile.position = _cell_position(from_cell)
+		staged_movement_tiles.erase(from_key)
 		animation_tiles.append(animated_tile)
 		tween.tween_property(animated_tile, "position", _cell_position(target_cell), duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	await tween.finished
 	animation_tiles.clear()
 	hidden_cells.clear()
+	staged_movement_tiles.clear()
 	queue_redraw()
 
 func _draw_animated_tile(animated_tile: AnimatedTile) -> void:
