@@ -161,18 +161,4 @@ dynamic Day discovery + Day 3, the Mage's second spell (`arcane_bolt`) with a pr
 spell-selection UI, and mid-battle reinforcement + repositioning during between-wave breathers.
 Remaining / next up:
 
-1. Improve the UI in all the game areas. The castle, the match-3 game etc.
-   At the moment the UI is all over the place and some objects overlap each other.
-   Make sure to remember that this will be a fantasy game with pixel graphics, so any changes should push the UI to look closer to the finished product.
-2. The game should have a HUD which displays the various resources regardless of which part of the game you're in.
-   The HUD should be unobtrusive enough so it doesn't take a lot of space, but when hovered over (or tapped on mobile), it should display more information on the resources.
-   The HUD will also be pixelart based in the final version, so set things up accordingly.
-3. In the match-3 game add an animation for swapping of the pieces that should happen before any other animations.
-4. Author Day 4+ (data-only now) and continue the difficulty curve — possibly introduce new enemy
-   types/abilities to keep it fresh.
-5. Allow switching an already-placed Mage's spell mid-battle (today the spell is chosen only at
-   placement — see [docs/systems/tower_defense.md](systems/tower_defense.md#mage-spellcasting)).
-6. Add more spells (e.g. a slow/utility spell) now that multi-spell + selection exists.
-7. Mine pacing (move limit/timer) is still an open, lower-priority idea from the original design doc
-   — no fail state is intended, just pacing.
-8. Milestone 8 polish: save/load robustness, mobile UI/touch input, audio/VFX, balancing pass.
+
