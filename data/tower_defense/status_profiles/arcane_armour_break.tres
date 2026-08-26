@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="StatusEffectProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/tower_defense/status_effect_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "arcane_armour_break"
+display_name = "Sundering Arcana"
+armour_break_duration_steps = 2
+armour_break_amount = 2

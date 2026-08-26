@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SpellData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/adventurers/spell_data.gd" id="1"]
+[ext_resource type="Resource" path="res://data/tower_defense/status_profiles/thorn_nova_anti_swarm.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = "thorn_nova"
+display_name = "Thorn Nova"
+is_aoe = true
+damage_multiplier = 0.8
+status_effect_profile = ExtResource("2")

@@ -22,9 +22,11 @@ button and returns through `Return to Castle`.
   automatically when present. Gravity runs immediately after the move so pieces do not float.
 - Matched tiles are removed, remaining tiles fall down, and cascades resolve automatically.
 - Empty spaces are not refilled from the top.
-- Once all five top rows are empty, the `Descend` button becomes available. Pressing it shifts the
-  lower five rows to the top and generates five new rows at the bottom. This increases depth by
-  one and emits `EventBus.mine_depth_changed`; descent is never automatic.
+- Once all five top rows are empty, the `Descend` button becomes available. A persistent HUD line
+  now shows readiness progress (`Descend ready: X/5 top rows clear`) so players can see how close
+  they are before it unlocks. Pressing `Descend` shifts the lower five rows to the top and
+  generates five new rows at the bottom. This increases depth by one and emits
+  `EventBus.mine_depth_changed`; descent is never automatic.
 - Copper is available at depth 0, iron at depth 5, and gold at depth 15. Matching a valuable tile
   adds its material directly through `GameState.add_material()` and emits
   `EventBus.mine_match_resolved`.
@@ -49,3 +51,5 @@ button and returns through `Return to Castle`.
   Deferred status text (for example `New layer opened`) is shown after the queue finishes.
 - Mine-specific HUD now focuses on depth/status/actions; shared resource counts moved to the
   full-width `TopResourceBar` at the top of the scene.
+- Idle/help status copy now repeatedly calls out the goal ("clear the top edge") to make descent
+  requirements obvious without trial-and-error.

@@ -2,13 +2,16 @@ extends Control
 class_name TavernController
 ## Recruits new adventurers into GameState.owned_adventurers on a real-time refresh timer.
 
-@export var pool_ids: Array[String] = ["swordsman", "archer", "mage", "berserker"]
-@export var refresh_interval_seconds: int = 21600  # 6 real hours
+@export var pool_ids: Array[String] = ["swordsman", "archer", "mage", "berserker", "pikeman", "druid"]
 
 @onready var roster_list: VBoxContainer = $RosterList
 @onready var reroll_button: Button = $RerollButton
+@onready var upgrade_row: BuildingUpgradeRow = $UpgradeRow
 
 func _ready() -> void:
+	upgrade_row.building_id = "tavern"
+	upgrade_row.refresh()
+	EventBus.building_upgraded.connect(_on_building_upgraded)
 	_refresh_if_needed()
 	reroll_button.pressed.connect(_on_reroll_pressed)
 	_build_rows()
@@ -16,12 +19,13 @@ func _ready() -> void:
 func refresh() -> void:
 	_refresh_if_needed()
 	_build_rows()
+	upgrade_row.refresh()
 
 func _refresh_if_needed() -> void:
 	var now := Time.get_unix_time_from_system()
 	if now >= GameState.tavern_next_refresh_unix:
 		GameState.refresh_tavern_roster(pool_ids)
-		GameState.tavern_next_refresh_unix = now + refresh_interval_seconds
+		GameState.tavern_next_refresh_unix = now + GameState.tavern_refresh_interval_seconds()
 
 func _build_rows() -> void:
 	var reroll_cost := GameState.tavern_reroll_cost()
@@ -64,3 +68,9 @@ func _on_sign_pressed(def_id: String) -> void:
 func _on_reroll_pressed() -> void:
 	if GameState.reroll_tavern(pool_ids):
 		_build_rows()
+
+func _on_building_upgraded(building_id: String, _new_level: int) -> void:
+	if building_id != "tavern":
+		return
+	_refresh_if_needed()
+	_build_rows()

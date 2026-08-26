@@ -20,8 +20,17 @@ offset_top = 8.0
 offset_right = -10.0
 offset_bottom = -8.0
 
-[node name="Chips" type="HBoxContainer" parent="Panel/Margin"]
+[node name="ContentRow" type="HBoxContainer" parent="Panel/Margin"]
 anchor_right = 1.0
 anchor_bottom = 1.0
+theme_override_constants/separation = 16
+
+[node name="ContextLabel" type="Label" parent="Panel/Margin/ContentRow"]
+text = "Castle"
+theme_override_font_sizes/font_size = 16
+
+[node name="Chips" type="HBoxContainer" parent="Panel/Margin/ContentRow"]
+layout_mode = 2
+size_flags_horizontal = 3
 alignment = 1
 theme_override_constants/separation = 18

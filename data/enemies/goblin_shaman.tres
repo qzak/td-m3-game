@@ -6,11 +6,11 @@
 script = ExtResource("1")
 id = "goblin_shaman"
 display_name = "Goblin Shaman"
-health = 18
-armour = 0
+health = 17
+armour = 1
 move_steps_per_turn = 1
 is_boss = false
 can_stun = true
 stun_duration_steps = 2
 stun_range = 1
-bounty = 10
+bounty = 8

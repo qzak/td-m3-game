@@ -13,11 +13,12 @@ alongside code changes so it stays a reliable reference. See
 | [scripts/tower_defense/grid_map.gd](../../scripts/tower_defense/grid_map.gd) (`TDGridMap`) | Draws the grid + path, hit-tests mouse clicks/hover into cells, draws the range-preview overlay. |
 | [scripts/tower_defense/adventurer.gd](../../scripts/tower_defense/adventurer.gd) (`TDAdventurer`) | Per-placed-unit state: attack pool charge/regen, range check. |
 | [scripts/tower_defense/enemy.gd](../../scripts/tower_defense/enemy.gd) (`TDEnemy`) | Per-enemy state: health/armour, path following, move-speed cooldown. |
+| [data/tower_defense/status_effect_profile.gd](../../data/tower_defense/status_effect_profile.gd) + [data/tower_defense/status_profiles/*.tres](../../data/tower_defense/status_profiles/) | Data-driven on-hit status effect profile used by adventurers/spells (slow, armour break, anti-swarm). |
 | [scenes/tower_defense/adventurer_unit.tscn](../../scenes/tower_defense/adventurer_unit.tscn) / [enemy_unit.tscn](../../scenes/tower_defense/enemy_unit.tscn) | Placeholder visuals (colored square + stat label) — no art yet. |
 | [scenes/ui/top_resource_bar.tscn](../../scenes/ui/top_resource_bar.tscn) / [scripts/ui/top_resource_bar.gd](../../scripts/ui/top_resource_bar.gd) (`TopResourceBar`) | Shared full-width resource strip with placeholder icon swatches, context filtering, and live `EventBus` updates. |
-| [data/adventurers/*.tres](../../data/adventurers/) | `AdventurerData` resource instances (see roster below). |
-| [data/enemies/goblin.tres](../../data/enemies/goblin.tres), [large_goblin.tres](../../data/enemies/large_goblin.tres) | Enemy types (see roster below). |
-| [data/waves/day_1.tres](../../data/waves/day_1.tres) + `day1_wave*.tres` | `DayData`/`WaveData` resources defining the current Day's wave sequence (see below). |
+| [data/adventurers/*.tres](../../data/adventurers/) + [data/adventurers/spells/*.tres](../../data/adventurers/spells/) | `AdventurerData` and `SpellData` resource instances (see rosters below). |
+| [data/enemies/*.tres](../../data/enemies/) | Enemy types (see roster below). |
+| [data/waves/day_1.tres](../../data/waves/day_1.tres) + `day*_wave*.tres` | `DayData`/`WaveData` resources defining each day's wave sequence (see below). |
 
 ## Grid & Path
 
@@ -35,6 +36,8 @@ alongside code changes so it stays a reliable reference. See
   underneath keep their own `STOP` filter and still work normally.
 - Resource display is now provided by the shared full-width `TopResourceBar` (battle context), while
   battle-specific labels (castle HP, wave state, selection/status) stay on the TD HUD.
+- HUD labels that matter during combat (`CastleHPLabel`, `WaveLabel`, `WaveStateLabel`) are offset
+  below the top bar safe zone for clearer 1280x720 readability.
 
 ## Battle Loop
 
@@ -48,7 +51,8 @@ alternates:
 - **Attack step** (`_attack_step`): each adventurer whose pool is `>= attack_pool` picks the
   valid in-range enemy furthest along the path (closest to the castle) and attacks, looping so
   a large regen can trigger multiple attacks in one step. Damage is
-  `randi_range(damage_min, damage_max) - enemy.armour` (floored at 0).
+  `randi_range(damage_min, damage_max) * spell_multiplier * anti_swarm_multiplier`, then reduced by
+  enemy effective armour in `TDEnemy.take_damage()` (floored at 0).
   Attack visuals fire per hit (melee swing or ranged projectile/impact), and kills are removed
   from simulation immediately before their death tween finishes on-screen.
 
@@ -73,13 +77,20 @@ The timer isn't running continuously for the whole Day, though — see below.
 - Enemy traversal uses a short hop presentation (`HOP_DURATION = 0.22`, `HOP_HEIGHT = 10`):
   movement tweens through an elevated midpoint while the body briefly squash-stretches, but
   path/blocking logic still resolves from discrete path cells.
+- `TDEnemy` now also tracks temporary status state (slow + armour break). Durations tick once per
+  move step (after movement resolution), so attack-applied effects influence upcoming movement and
+  later hits without changing targeting order.
 
 ## Enemy Roster (current)
 
 | Name | id | Health | Armour | Move Speed |
 |---|---|---|---|---|
 | Goblin | `goblin` | 25 | 0 | 1 cell every move step |
-| Large Goblin | `large_goblin` | 60 | 2 | 1 cell every **other** move step, and blocks the path behind it |
+| Goblin Rider | `goblin_rider` | 20 | 0 | 1 cell every move step (plus occasional double-move burst) |
+| Goblin Shaman | `goblin_shaman` | 17 | 1 | 1 cell every move step (stuns nearby adventurers) |
+| Goblin Hexer | `goblin_hexer` | 30 | 2 | 1 cell every **other** move step (longer-range stun support) |
+| Large Goblin | `large_goblin` | 60 | 3 | 1 cell every **other** move step, and blocks the path behind it |
+| Goblin Brute | `goblin_brute` | 85 | 5 | 1 cell every **other** move step, heavy-armour blocker |
 
 ## Day / Wave Structure
 
@@ -89,18 +100,13 @@ The timer isn't running continuously for the whole Day, though — see below.
   health_multiplier)`).
 - Each `WaveData` is just `enemy_data: EnemyData` + `count` + `spawn_delay_steps` — no id/string
   lookup, it references the `EnemyData` resource directly (same pattern as adventurers).
-- **Waves are player-triggered, one at a time, via a single button that changes meaning
-  depending on state** (`start_button` / `_update_start_button_label()`):
-  - **No wave currently spawning** (`wave_active == false`): button reads `Call Wave N` — a
-    direct action. Pressing it calls `_begin_wave()`, which starts that wave's enemies spawning
-    immediately (and, on the very first press, locks adventurer placement and fires
-    `EventBus.day_started`).
-  - **A wave is actively spawning** (`wave_active == true`): button becomes a toggle, reading
-    `Auto-Call Next Wave` / `Cancel Auto-Call`. It flips `auto_call_next` and does *not* start
-    anything immediately — waves never overlap. Once the active wave finishes spawning
-    (`_process_spawn_queue()`), if `auto_call_next` was left on, `_begin_wave()` runs
-    immediately for the next wave; otherwise the button reverts to `Call Wave N` and waits for
-    a manual press.
+- **Waves are player-triggered, one at a time, with split controls for clarity**:
+  - `Call Wave N` (primary button) always means "start the next wave now" and is disabled while
+    a wave is already spawning.
+  - `Auto-Call: ON/OFF` (secondary toggle) arms/disarms automatic calling of the next wave once
+    the current one finishes spawning.
+  - This removes the old single-button mode-switch ambiguity while keeping the same pacing logic
+    (`auto_call_next` still controls automatic chaining, waves never overlap).
 - **The step timer pauses whenever the field is clear and no wave is actively spawning**
   (`_check_end_conditions()`): `step_timer.stop()` and the result label prompts the player to
   call the next wave. This is deliberate — it stops adventurers from passively racking up
@@ -109,16 +115,25 @@ The timer isn't running continuously for the whole Day, though — see below.
 - [data/waves/day_1.tres](../../data/waves/day_1.tres) is the current sample: goblins in
   waves 1-3 (5 @ 2-step spacing, 8 @ 2-step, 10 @ 1-step), then a 4th wave of 3 Large Goblins
   (4-step spacing) to demonstrate the path-blocking behavior. `difficulty_scalar = 1.0`.
-- The HUD's `WaveLabel` shows `Day X — Wave Y/Z — Enemies left to spawn: N`, driven by
-  `current_wave_index` and `total_enemies_remaining_to_spawn`.
+- The HUD's `WaveLabel` now shows
+  `Day X — Wave Y/Z — Manual call|Auto-call armed — Enemies left to spawn: N`, and a dedicated
+  `WaveStateLabel` reports explicit state (`Prep`, `Spawning wave N`, `Breather`, `Final wave cleared`).
 - `EventBus.day_started/day_won/day_lost` now emit `day_data.day_index` instead of a hardcoded 0.
 - [data/waves/day_2.tres](../../data/waves/day_2.tres) is a harder second Day (`difficulty_scalar =
-  1.3`, `completion_reward = 250`): goblins, then Goblin Riders, then Goblin Shamans, then Large
+  1.3`, `completion_reward = 200`): goblins, then Goblin Riders, then Goblin Hexers, then Large
   Goblins, then a fast 8-strong Goblin Rider finale wave (1-step spacing).
 - [data/waves/day_3.tres](../../data/waves/day_3.tres) is a third Day (`difficulty_scalar = 1.6`,
-  `completion_reward = 400`) with six waves that reuse the existing goblin roster on a rising curve:
-  goblins → Goblin Riders → Goblin Shamans → a tight 10-strong Goblin Rider swarm (1-step spacing)
-  → more Shamans → a 6-strong Large Goblin finale.
+  `completion_reward = 210`) with six waves on a rising curve:
+  Goblin Riders → Large Goblins → Goblin Brutes → a tight 10-strong Goblin Rider swarm
+  (1-step spacing) → Goblin Shamans → more Shamans.
+- [data/waves/day_4.tres](../../data/waves/day_4.tres) pushes pacing further (`difficulty_scalar = 1.9`,
+  `completion_reward = 280`) with seven waves that alternate tempo and control pressure:
+  Goblins → Goblin Riders → Goblin Hexers → Large Goblins (slower breather) → a fast
+  Goblin Shaman surge → heavier Goblin Rider swarm → Goblin Brute finale.
+- [data/waves/day_5.tres](../../data/waves/day_5.tres) is the current peak (`difficulty_scalar = 2.25`,
+  `completion_reward = 360`) with eight waves escalating through Riders/Hexers/Large Goblins,
+  then sustained Shaman/Brute pressure into a dense Goblin Rider spike and a heavy Goblin
+  Brute close.
 
 ## Day Selection
 
@@ -140,7 +155,7 @@ The timer isn't running continuously for the whole Day, though — see below.
   highest *contiguous* `n` starting at `1` (stopping at the first gap; falls back to `1` if none are
   found). The result is cached in `_total_known_days_cache` so the disk scan only happens once.
   Authoring a new `day_<n>.tres` (with its waves) is therefore all it takes to add a Day — no code
-  change. Currently Days 1–3 exist, so it returns `3`.
+  change. Currently Days 1–5 exist, so it returns `5`.
 
 ## Placement, Reinforcement & Range Preview
 
@@ -184,12 +199,15 @@ The timer isn't running continuously for the whole Day, though — see below.
 | The Archer | `archer` | Physical ranged | 1–4 | 2–4 | 80 / 45 | 100 (starting) |
 | The Mage | `mage` | Magic | 4–5 | 4–8 | 120 / 30 | 100 (starting) |
 | The Berserker | `berserker` | Physical melee | 1–1 | 8–14 | 140 / 20 | 250 (Tavern) |
+| The Pikeman | `pikeman` | Physical melee | 1–2 | 5–9 | 110 / 35 | 180 (Tavern) |
+| The Druid | `druid` | Magic | 3–5 | 3–6 | 110 / 35 | 220 (Tavern) |
 
 Range is Manhattan distance (`|dx| + |dy|`, diamond-shaped) from the adventurer's cell to the
-enemy's current path cell — melee units can only hit true neighbors, the mage is long-range-only
-and can't hit anything adjacent to it. The Berserker hits hardest but has the slowest charge
-(lowest `attack_regen`) of any adventurer. See [docs/systems/castle.md](castle.md) for how the
-roster is recruited (Tavern) and selected (Quarters) before a battle.
+enemy's current path cell — melee units can only hit true neighbors unless they have an extended
+`range_max` (like Pikeman), while mage/druid are long-range-only and can't hit adjacent targets.
+The Berserker still has the slowest charge (lowest `attack_regen`) among recruitables. See
+[docs/systems/castle.md](castle.md) for how the roster is recruited (Tavern) and selected
+(Quarters) before a battle.
 
 ## Combat Animation Details
 
@@ -201,13 +219,15 @@ roster is recruited (Tavern) and selected (Quarters) before a battle.
   tween (~0.2s), then `queue_free`s. The enemy is already removed from the `enemies` array when
   this starts, so it no longer blocks movement or receives targeting.
 
-## Mage Spellcasting
+## Magic Spellcasting
 
 - `AdventurerData.spell_ids` (only meaningful for `type == MAGIC`) references `SpellData` resources
   at `res://data/adventurers/spells/<id>.tres` (`SpellData`: `id`, `display_name`, `is_aoe: bool`,
-  `damage_multiplier: float`). The Mage now knows **two** spells: `fireball` (`is_aoe = true`,
-  `damage_multiplier = 0.6` — hits everything in range for reduced per-hit damage) and `arcane_bolt`
-  (`is_aoe = false`, `damage_multiplier = 1.6` — a single-target nuke).
+  `damage_multiplier: float`).
+  - Mage spells: `fireball` (`is_aoe = true`, `damage_multiplier = 0.6`) and `arcane_bolt`
+    (`is_aoe = false`, `damage_multiplier = 1.6`).
+  - Druid spells: `thorn_nova` (`is_aoe = true`, `damage_multiplier = 0.8`) and `frost_sigil`
+    (`is_aoe = false`, `damage_multiplier = 1.3`).
 - **Spell selection UI:** for any roster entry that is `MAGIC`-type with two or more spells,
   `_build_placement_buttons()` calls `_build_spell_picker()`, which adds an `OptionButton` next to
   that unit's Place button listing each spell's `display_name`. The choice is stored in
@@ -230,6 +250,40 @@ roster is recruited (Tavern) and selected (Quarters) before a battle.
 - Towers use the single-target path (they have no `spell_ids`, so `_resolve_spell()` returns `null`
   and the multiplier is `1.0`).
 
+## Status Effects Foundation
+
+- `StatusEffectProfile` is a new data resource (`data/tower_defense/status_effect_profile.gd`) with
+  three independent knobs:
+  - **Slow:** `slow_duration_steps`, `slow_move_period_bonus` (temporarily increases effective
+    `move_period`, so enemies act less often).
+  - **Armour Break:** `armour_break_duration_steps`, `armour_break_amount` (temporarily reduces
+    effective armour used by `TDEnemy.take_damage()`).
+  - **Anti-Swarm:** `anti_swarm_radius`, `anti_swarm_min_enemies`, `anti_swarm_damage_multiplier`
+    (bonus damage when the target is inside a local cluster).
+- Profiles are optional and data-driven on both `AdventurerData` and `SpellData`:
+  - `AdventurerData.status_effect_profile` applies to that unit's attacks by default.
+  - `SpellData.status_effect_profile` adds spell-specific effects for magic attacks.
+  - During hit resolution, controller collects both profiles (if present), rolls damage, applies
+    anti-swarm multipliers, then applies slow/armour-break on surviving targets.
+- Current status-content wiring (broader tactical spread):
+  - **Adventurer baselines:** Archer uses `archer_slow`, Berserker uses `berserker_armour_break`,
+    and Pikeman uses `pikeman_anti_swarm`.
+  - **Spell overlays:** Arcane Bolt uses `arcane_armour_break`; Fireball uses
+    `fireball_anti_swarm`; Frost Sigil uses `frost_sigil_slow`; Thorn Nova uses
+    `thorn_nova_anti_swarm` (cluster threshold tuned down to 3 nearby enemies).
+  - **Enemy tuning to exercise statuses:** shaman/hexer/large/brute armour values were nudged up
+    (with a slight brute/shaman HP trim) so slow, armour-break, and anti-swarm each have clearer
+    target archetypes across Day 1–3 waves.
+- **In-combat readability (lightweight pass):**
+  - `enemy_unit.tscn` now includes a compact `StatusLabel` above HP that only appears while
+    effects are active.
+  - Slow and armour-break durations are shown as short codes with step expiry timing:
+    `S#` (slow steps left), `B#` (armour-break steps left), e.g. `S2 B1`.
+  - Enemy body tint shifts while effects are active (cool tint for slow, warm tint for break,
+    mixed tint for both) and returns to normal when effects expire.
+  - When anti-swarm bonus damage actually triggers (`multiplier > 1.0`), the hit target shows
+    a short `SWARM xN.NN` floating cue plus a brief body pulse; no persistent icon is added.
+
 ## Equipment Bonuses
 
 - Items crafted at the Weapon/Armour Smith and equipped via the Armoury (see
@@ -251,22 +305,30 @@ roster is recruited (Tavern) and selected (Quarters) before a battle.
 
 ## Gold Economy
 
-- `EnemyData.bounty` (default `5`, tuned up for tougher types — Large Goblin `12`, Goblin
-  Shaman/Rider `10`) is awarded via `GameState.add_currency()` the instant an enemy dies in
+- `EnemyData.bounty` (default `5`, tuned up for tougher types — Goblin Rider `10`,
+  Goblin Shaman `8`, Large Goblin `10`, Goblin Hexer `12`, Goblin Brute `16`) is awarded via
+  `GameState.add_currency()` the instant an enemy dies in
   `_attack_step()`. Enemies that reach the castle door instead (no kill) grant nothing.
-- `DayData.completion_reward` (`150` on `day_1.tres`) is awarded once, on a full Day clear, right
+- `DayData.completion_reward` (`130` on `day_1.tres`) is awarded once, on a full Day clear, right
   before `EventBus.day_won` fires.
+- End-of-day result copy is now explicit:
+  - win: bonus coins + whether a new day unlocked,
+  - loss: failure reason (`Castle HP reached 0`).
+- `GameState.last_day_result` stores a compact day recap (win/loss, coin delta, completion bonus,
+  unlock result) so Castle/War Room can show the most recent outcome.
 - The shared `TopResourceBar` mirrors `GameState.currency` and materials in real time via `EventBus`,
-  so gold/material gains are visible mid-battle, not just back in the Castle.
+  so coin/material gains are visible mid-battle, not just back in the Castle.
 - `GameState.currency` starts at `100` for a new save — enough to recruit the cheaper adventurers
   outright, but a full Day clear (or several kills) is needed to afford the Berserker (`250`).
 
 ## Known Limitations / Next Up
 
-- The Mage's spell is chosen pre-placement via the TD spell picker — there's still no way to switch
-  an *already-placed* unit's spell mid-battle (see [Mage Spellcasting](#mage-spellcasting)).
+- Magic-unit spells are chosen pre-placement via the TD spell picker — there's still no way to switch
+  an *already-placed* unit's spell mid-battle (see [Magic Spellcasting](#magic-spellcasting)).
 - Reinforcement and repositioning are now allowed during between-wave breathers (see
   [Placement, Reinforcement & Range Preview](#placement-reinforcement--range-preview)), but not
   while a wave is actively spawning or enemies are on the field.
-- Days 1–3 exist and `GameState.total_known_days()` now discovers them dynamically — authoring
-  further Days is data-only, though the difficulty curve beyond Day 3 is still open.
+- Status readability is intentionally minimal (short text + tint + trigger popups only); there is
+  still no full icon+tooltip inspection layer.
+- Days 1–5 exist and `GameState.total_known_days()` now discovers them dynamically — further
+  Day authoring remains data-only.

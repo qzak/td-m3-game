@@ -10,7 +10,7 @@ anchor_bottom = 1.0
 
 [node name="Title" type="Label" parent="."]
 position = Vector2(20, 20)
-text = "Armour Smith — craft armour from refined materials"
+text = "Armour Smith — forge armour; upgrades unlock higher-tier recipes"
 
 [node name="RecipeList" type="VBoxContainer" parent="."]
 position = Vector2(20, 60)

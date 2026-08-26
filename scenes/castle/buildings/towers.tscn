@@ -10,7 +10,7 @@ anchor_bottom = 1.0
 
 [node name="Title" type="Label" parent="."]
 position = Vector2(20, 20)
-text = "Towers — last-resort defenders flanking the castle door"
+text = "Towers — castle fallback defense; upgrades raise combat stats"
 
 [node name="UpgradeRow" parent="." instance=ExtResource("2")]
 building_id = "towers"

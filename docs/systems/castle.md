@@ -19,9 +19,9 @@ alongside code changes so it stays a reliable reference. See
 | [scripts/castle/smith_controller_base.gd](../../scripts/castle/smith_controller_base.gd) (`SmithControllerBase`) | Shared craft-list UI/logic for the two Smiths, configured per-subclass via `building_id` + `recipe_ids`. |
 | [scenes/castle/buildings/armoury.tscn](../../scenes/castle/buildings/armoury.tscn) / [scripts/castle/armoury_controller.gd](../../scripts/castle/armoury_controller.gd) (`ArmouryController`) | Lists owned crafted items and equips/unequips them onto active-roster adventurers. |
 | [scenes/castle/buildings/towers.tscn](../../scenes/castle/buildings/towers.tscn) / [scripts/castle/towers_panel.gd](../../scripts/castle/towers_panel.gd) (`TowersPanel`) | Minimal panel — Towers has no other player-facing UI yet, just its upgrade row. |
-| [scenes/castle/buildings/war_room.tscn](../../scenes/castle/buildings/war_room.tscn) / [scripts/castle/war_room_controller.gd](../../scripts/castle/war_room_controller.gd) (`WarRoomController`) | Dedicated day-selection panel; emits day-start requests while preserving unlock/lock behavior. |
+| [scenes/castle/buildings/war_room.tscn](../../scenes/castle/buildings/war_room.tscn) / [scripts/castle/war_room_controller.gd](../../scripts/castle/war_room_controller.gd) (`WarRoomController`) | Dedicated day-selection panel; emits day-start requests, preserves unlock/lock behavior, and surfaces the most recent day result summary. |
 | [scenes/castle/buildings/building_upgrade_row.tscn](../../scenes/castle/buildings/building_upgrade_row.tscn) / [scripts/castle/building_upgrade_row.gd](../../scripts/castle/building_upgrade_row.gd) (`BuildingUpgradeRow`) | Reusable component embedded in every building panel: shows current/next level and cost, spends currency+materials via `GameState.upgrade_building()`. |
-| [data/buildings/*.tres](../../data/buildings/) | `BuildingData` cost resources (`max_level`, per-level currency/material costs) — one per building id, including `towers.tres` (cost-only; `towers_stats.tres`/`TowerData` still holds Towers' per-level combat stats). |
+| [data/buildings/*.tres](../../data/buildings/) | `BuildingData` resources (`max_level`, per-level currency/material costs, optional per-level capacity/timer/speed vectors) — one per building id, including `towers.tres` (combat stats still live in `towers_stats.tres`/`TowerData`). |
 | [data/items/*.tres](../../data/items/) | `ItemData` resources for the 6 craftable weapons/armour pieces (see Weapon/Armour Smith section below). |
 | [autoload/game_state.gd](../../autoload/game_state.gd) (`GameState`) | `recruit_adventurer()`, `capacity_for()`, `set_active_roster()`, `upgrade_building()`, `start_smelting()`/`collect_ready_smelting()`, `craft_item()`, `equip_item()`/`unequip_item()` — the save-data mutations the hub drives. |
 | [autoload/save_manager.gd](../../autoload/save_manager.gd) (`SaveManager`) | Loads on Castle `_ready()`; autosaves on `EventBus.currency_changed` / `materials_changed` / `adventurer_recruited` / `building_upgraded` / `day_won` / `day_lost`. |
@@ -40,6 +40,8 @@ alongside code changes so it stays a reliable reference. See
   "Start Day N" button (`1..GameState.total_known_days()`), marks any day past
   `GameState.unlocked_day_index` as `(Locked)`, and emits the selected day back to Castle to start
   `td_battle.tscn`.
+- War Room now also shows a compact **Last Day Result** line (win/loss, coin delta, unlock result)
+  using metadata stored in `GameState.last_day_result`.
 - On returning from a battle (`TDBattleController`'s "Return to Castle" button, shown on
   `day_won`/`day_lost`), the scene reloads `castle.tscn` fresh — `CastleController._ready()` runs
   again and reloads the save, so anything `SaveManager` persisted mid-battle carries over (including
@@ -48,21 +50,34 @@ alongside code changes so it stays a reliable reference. See
   building panel offset to the right to avoid top-bar overlap.
 - The shared `TopResourceBar` spans the top edge of the screen. Castle uses the `castle` context by
   default and switches to the `smith` context when Smelter/Weapon Smith/Armour Smith are focused to
-  prioritize refined-material visibility.
+  prioritize refined-material visibility. The bar now shows a scene context tag and emphasizes
+  context-primary chips for faster scanning.
 
 ## Building Upgrades
 
 - Every building (`tavern`, `quarters`, `smelter`, `weapon_smith`, `armour_smith`, `armoury`, `towers`)
-  now has a cost-only `BuildingData` resource at `data/buildings/<id>.tres` (`max_level = 5`, 4-entry
+  has a `BuildingData` resource at `data/buildings/<id>.tres` (`max_level = 5`, 4-entry
   `upgrade_currency_costs`/`upgrade_material_costs` arrays — index 0 is the cost to go from level 1→2).
-  Effects stay in their own resource where they already existed (Towers' per-level combat stats remain
-  in `data/buildings/towers_stats.tres`/`TowerData`; `BuildingData` is purely for gating the upgrade).
+  `BuildingData` can also carry effect vectors consumed by Castle systems:
+  `capacity_by_level`, `tavern_refresh_seconds_by_level`, and
+  `smelter_time_multiplier_by_level`. Towers' combat stats still remain in
+  `data/buildings/towers_stats.tres`/`TowerData`.
+- Differentiation pass: Tavern now emphasizes roster breadth/refresh cadence, Quarters prioritizes active
+  roster slots, Armoury focuses on item-storage growth, Smelter scales both queue slots and processing
+  speed, while Smiths and Towers have steeper late upgrade costs.
 - Every building panel embeds a `BuildingUpgradeRow` (`scenes/castle/buildings/building_upgrade_row.tscn`)
-  showing the building's current level, next-level cost, and an "Upgrade" button. Pressing it calls
+  showing the building's current level, next-level cost, and a concise **Now/Next** effect line
+  (`Now/Next: <current> -> <next>`, or `Now: <current> (max)` at max level). Pressing "Upgrade" calls
   `GameState.upgrade_building(building_id)`, which validates and spends currency/materials, bumps
   `building_levels[building_id]`, and emits `EventBus.building_upgraded` — every upgrade row listens
   for that signal (plus `currency_changed`/`materials_changed`) so all open rows refresh automatically,
   not just the one that was pressed.
+- Building-panel subtitle copy is intentionally progression-forward and role-specific (what each building
+  does now, plus what its upgrades improve/unlock next) so players can scan identity and upgrade value
+  before opening detailed lists.
+- Effect line mappings are data-driven where available: Tavern/Quarters/Smelter/Armoury show capacity
+  (and Tavern refresh cadence / Smelter time multiplier), Smiths show craft-tier level gating, and
+  Towers show `towers_stats.tres` combat stat progression.
 - Towers has no other player-facing UI yet, so its panel (`TowersPanel`) is just a title label plus
   the shared upgrade row.
 
@@ -73,14 +88,15 @@ alongside code changes so it stays a reliable reference. See
   Day completion reward.
 - `GameState.owned_adventurers` starts pre-populated with the three founding adventurers
   (Swordsman, Archer, Mage) — the player never needs to recruit them. `TavernController.pool_ids`
-  (currently `["swordsman", "archer", "mage", "berserker"]`) is the full catalog offered in the
-  Tavern; the three starting types just show up already "Owned", so **Berserker is the only
-  adventurer that actually needs recruiting today**.
+  (currently `["swordsman", "archer", "mage", "berserker", "pikeman", "druid"]`) is the full
+  catalog offered in the Tavern; the three starting types just show up already "Owned", while
+  Berserker/Pikeman/Druid are recruitable contracts.
 - `_refresh_if_needed()` compares `Time.get_unix_time_from_system()` against
   `GameState.tavern_next_refresh_unix`; once past it, `GameState.refresh_tavern_roster(pool_ids)`
   draws a random subset of `pool_ids` sized to `GameState.capacity_for("tavern")` (`3` at level 1,
-  out of the 4-entry `pool_ids` catalog) into `tavern_roster_ids`, and the next refresh is scheduled
-  `refresh_interval_seconds` (default `21600`, i.e. 6 real hours) later.
+  out of the 6-entry `pool_ids` catalog) into `tavern_roster_ids`, and the next refresh is scheduled
+  by `GameState.tavern_refresh_interval_seconds()`, read from Tavern `BuildingData`
+  (`21600 -> 18000 -> 14400 -> 10800 -> 7200`, i.e. 6h down to 2h by level 5).
 - Each row shows `display_name` + `recruit_cost` (new `AdventurerData` field) and a button that's
   disabled and reads "Owned" if `GameState.owned_adventurers` already has an entry with that
   `def_id`, or disabled if `GameState.currency < recruit_cost`. Pressing it calls
@@ -98,15 +114,14 @@ alongside code changes so it stays a reliable reference. See
   a Day battle is actually played), via a listener in `GameState._ready()`. Persisted the same way
   as the rest of the Tavern state.
   - Both the natural refresh and a manual reroll now go through `GameState._random_subset()`
-    (shuffle-and-slice), so with a 4-entry `pool_ids` catalog and a 3-slot display, either action
-    has a real chance of changing which adventurer is missing from the roster — Reroll is no
-    longer a no-op.
+    (shuffle-and-slice), so with a 6-entry `pool_ids` catalog and a 3-slot display, rerolls and
+    refreshes produce a broader spread of possible contract combinations.
 
 ## Quarters
 
 - `active_roster_ids` also starts pre-filled (`["swordsman", "archer", "mage"]`), matching the
   Quarters' starting capacity of 3 — so a fresh save is immediately playable in the TD battle
-  without a mandatory trip through Quarters first. Recruiting Berserker means visiting Quarters to
+  without a mandatory trip through Quarters first. Recruiting Berserker/Pikeman/Druid means visiting Quarters to
   swap one of the starting three out, unless `building_levels["quarters"]` has been raised via its
   `BuildingUpgradeRow` (see [Building Upgrades](#building-upgrades) above).
 - `QuartersController` splits owned adventurers into two `VBoxContainer` lists side by side —
@@ -114,8 +129,9 @@ alongside code changes so it stays a reliable reference. See
   `AvailableList` (owned but not active, each row with an "Add" button, disabled once capacity is
   full). Adding/removing calls `GameState.set_active_roster()` and rebuilds both lists.
 - `GameState.recruit_adventurer()` never caps `owned_adventurers` — Quarters slots for adventurers
-  you own are effectively unlimited. `GameState.capacity_for("quarters")` (`2 + building_levels["quarters"]`,
-  so `3` at level 1) only caps `active_roster_ids`, the subset taken into the next Day.
+  you own are effectively unlimited. `GameState.capacity_for("quarters")` now reads Quarters
+  `capacity_by_level` (`3, 4, 5, 6, 8`) and only caps `active_roster_ids`, the subset taken into the
+  next Day.
 - `active_roster_ids` feeds directly into `TDBattleController._build_placement_buttons()`, which
   builds one "Place X" button per active roster id by loading `res://data/adventurers/<id>.tres`
   — this is the actual Castle → TD bridge. If the roster is empty (e.g. running `td_battle.tscn`
@@ -131,8 +147,9 @@ alongside code changes so it stays a reliable reference. See
   (`refined_copper`, `refined_iron`, `refined_gold`) on a real-time queue, mirroring the Tavern's
   timestamp-based approach rather than a per-frame timer.
 - `GameState.SMELT_RECIPES` maps each raw material to its output id and real-seconds duration
-  (`copper` 30s, `iron` 60s, `gold` 120s). `GameState.smelter_slot_capacity()` (`= building_levels["smelter"]`)
-  caps how many jobs can be queued at once — 1 slot at level 1, growing with upgrades.
+  (`copper` 30s, `iron` 60s, `gold` 120s). `GameState.smelter_slot_capacity()` now reads
+  Smelter `capacity_by_level` (`1, 2, 3, 4, 6`), and queued durations are multiplied by
+  `smelter_time_multiplier_by_level` (`1.0, 0.9, 0.8, 0.7, 0.6`) at queue time.
 - `SmelterController` shows one "Smelt" button per raw material (disabled once out of that material
   or all slots are full) and a live queue list with a per-job countdown. A 1-second repeating
   `Timer` calls `GameState.collect_ready_smelting()` and rebuilds the rows, so completed jobs move
@@ -182,9 +199,8 @@ alongside code changes so it stays a reliable reference. See
 
 ## Known Limitations / Planned Next
 
-- Tavern's catalog is only 4 types wide, so a 3-slot random draw only ever omits one adventurer at
-  a time — the random-subset rotation (see [Tavern](#tavern)) will feel more meaningful once the
-  catalog grows beyond 4-5 types.
+- Tavern's catalog now has 6 types, but it still shows only 3 contracts at tavern level 1; upgrading
+  the Tavern increases simultaneous visible contracts and makes targeted recruiting easier.
 - No item rarity/tier visuals yet — the Smiths only gate crafting by `required_smith_level`, and the
   Armoury only shows item names, not rarity.
 - Only one weapon + one armour slot per adventurer; no accessory/trinket slot yet.

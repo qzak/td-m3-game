@@ -187,6 +187,18 @@ func _top_rows_are_empty() -> bool:
 func can_descend() -> bool:
 	return _top_rows_are_empty()
 
+func top_rows_clear_count() -> int:
+	var clear_rows := 0
+	for y in range(DESCENT_ROWS):
+		var row_clear := true
+		for x in range(WIDTH):
+			if tiles[y][x] != null:
+				row_clear = false
+				break
+		if row_clear:
+			clear_rows += 1
+	return clear_rows
+
 func descend() -> bool:
 	if not can_descend():
 		return false

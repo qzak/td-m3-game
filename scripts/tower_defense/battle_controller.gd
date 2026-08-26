@@ -18,11 +18,13 @@ const ADVENTURER_SCENE := preload("res://scenes/tower_defense/adventurer_unit.ts
 @onready var step_timer: Timer = $StepTimer
 @onready var castle_hp_label: Label = $UI/HUD/CastleHPLabel
 @onready var wave_label: Label = $UI/HUD/WaveLabel
+@onready var wave_state_label: Label = $UI/HUD/WaveStateLabel
 @onready var result_label: Label = $UI/HUD/ResultLabel
 @onready var selected_label: Label = $UI/HUD/SelectedLabel
 @onready var start_button: Button = $UI/HUD/Controls/StartBattleButton
+@onready var auto_call_button: Button = $UI/HUD/Controls/AutoCallButton
 @onready var return_button: Button = $UI/HUD/Controls/ReturnToCastleButton
-@onready var placement_buttons_container: HBoxContainer = $UI/HUD/Controls/PlacementButtonsContainer
+@onready var placement_buttons_container: Container = $UI/HUD/Controls/PlacementButtonsContainer
 @onready var top_resource_bar: Control = $UI/HUD/TopResourceBar
 
 var enemies: Array[TDEnemy] = []
@@ -50,9 +52,11 @@ var placement_open: bool = true
 ## The already-placed unit currently being repositioned (picked up), or null.
 var picked_up_adventurer: TDAdventurer = null
 var picked_up_origin_cell: Vector2i = Vector2i.ZERO
+var day_start_currency: int = 0
 
 func _ready() -> void:
 	castle_hp = starting_castle_hp
+	day_start_currency = GameState.currency
 
 	if GameState.selected_day_index > 0:
 		var loaded_day: DayData = load("res://data/waves/day_%d.tres" % GameState.selected_day_index)
@@ -70,13 +74,14 @@ func _ready() -> void:
 	step_timer.timeout.connect(_on_step_timer_timeout)
 
 	start_button.pressed.connect(_on_start_button_pressed)
+	auto_call_button.pressed.connect(_on_auto_call_button_pressed)
 	return_button.visible = false
 	return_button.pressed.connect(_on_return_button_pressed)
 
 	_spawn_towers()
 	top_resource_bar.set_context("battle")
 
-	_update_start_button_label()
+	_update_wave_controls()
 	_update_hud()
 
 ## Builds one placement button per adventurer in the active roster (falls back to a default
@@ -157,18 +162,18 @@ func _build_spell_picker(def: AdventurerData) -> void:
 func _on_return_button_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/castle/castle.tscn")
 
-## While a wave is actively spawning, toggles "auto-call the next wave" for when it finishes.
-## Otherwise (no wave currently spawning), immediately starts the next wave.
 func _on_start_button_pressed() -> void:
-	if current_wave_index >= day_data.waves.size():
+	if battle_over or wave_active or current_wave_index >= day_data.waves.size():
 		return
-
-	if wave_active:
-		auto_call_next = not auto_call_next
-		_update_start_button_label()
-		return
-
 	_begin_wave()
+
+func _on_auto_call_button_pressed() -> void:
+	var has_next_wave := current_wave_index < day_data.waves.size() - 1
+	if battle_over or not wave_active or not has_next_wave:
+		return
+	auto_call_next = not auto_call_next
+	_update_wave_controls()
+	_update_hud()
 
 func _begin_wave() -> void:
 	if not battle_started:
@@ -185,18 +190,20 @@ func _begin_wave() -> void:
 		result_label.text = ""
 		step_timer.start()
 
-	_update_start_button_label()
+	_update_wave_controls()
+	_update_hud()
 
-func _update_start_button_label() -> void:
-	if current_wave_index >= day_data.waves.size():
-		start_button.text = "All Waves Called"
+func _update_wave_controls() -> void:
+	if battle_over or current_wave_index >= day_data.waves.size():
+		start_button.text = "No More Waves"
 		start_button.disabled = true
-	elif wave_active:
-		start_button.text = "Cancel Auto-Call" if auto_call_next else "Auto-Call Next Wave"
-		start_button.disabled = false
 	else:
 		start_button.text = "Call Wave %d" % (current_wave_index + 1)
-		start_button.disabled = false
+		start_button.disabled = wave_active
+
+	var can_toggle_auto := not battle_over and wave_active and current_wave_index < day_data.waves.size() - 1
+	auto_call_button.disabled = not can_toggle_auto
+	auto_call_button.text = "Auto-Call: ON" if auto_call_next else "Auto-Call: OFF"
 
 func _select_adventurer(data: AdventurerData) -> void:
 	if not placement_open:
@@ -317,6 +324,7 @@ func _move_step() -> void:
 	# Stuns apply after movement so a freshly stunned adventurer skips the upcoming attack step.
 	for enemy in enemies:
 		enemy.try_stun(adventurers)
+		enemy.tick_status_effects()
 
 	_update_hud()
 	_check_end_conditions()
@@ -365,13 +373,16 @@ func _process_spawn_queue() -> void:
 	if auto_call_next and current_wave_index < day_data.waves.size():
 		_begin_wave()
 	else:
-		auto_call_next = false
-		_update_start_button_label()
+		if current_wave_index >= day_data.waves.size():
+			auto_call_next = false
+		_update_wave_controls()
+		_update_hud()
 
 func _attack_step() -> void:
 	for adventurer in adventurers:
 		var spell: SpellData = _resolve_spell(adventurer)
 		var damage_multiplier: float = spell.damage_multiplier if spell != null else 1.0
+		var status_profiles := _resolve_status_profiles(adventurer, spell)
 
 		if spell != null and spell.is_aoe:
 			while adventurer.can_attack():
@@ -382,9 +393,11 @@ func _attack_step() -> void:
 				var kills: Array[TDEnemy] = []
 				for target in targets.duplicate():
 					_play_attack_visual(adventurer, target)
-					var dmg := int(randi_range(adventurer.data.damage_min, adventurer.data.damage_max) * damage_multiplier)
+					var dmg := _roll_damage(adventurer, target, damage_multiplier, status_profiles)
 					if target.take_damage(dmg):
 						kills.append(target)
+					else:
+						_apply_on_hit_statuses(target, status_profiles)
 				for kill in kills:
 					enemies.erase(kill)
 					GameState.add_currency(kill.data.bounty)
@@ -396,11 +409,13 @@ func _attack_step() -> void:
 					break
 				adventurer.consume_pool()
 				_play_attack_visual(adventurer, target)
-				var dmg := int(randi_range(adventurer.data.damage_min, adventurer.data.damage_max) * damage_multiplier)
+				var dmg := _roll_damage(adventurer, target, damage_multiplier, status_profiles)
 				if target.take_damage(dmg):
 					enemies.erase(target)
 					GameState.add_currency(target.data.bounty)
 					target.play_death_animation()
+				else:
+					_apply_on_hit_statuses(target, status_profiles)
 	_check_end_conditions()
 
 func _play_attack_visual(adventurer: TDAdventurer, target: TDEnemy) -> void:
@@ -421,6 +436,51 @@ func _resolve_spell(adventurer: TDAdventurer) -> SpellData:
 			return null
 		spell_id = adventurer.data.spell_ids[0]
 	return load("res://data/adventurers/spells/%s.tres" % spell_id)
+
+func _resolve_status_profiles(adventurer: TDAdventurer, spell: SpellData) -> Array:
+	var profiles: Array = []
+	if adventurer.data.status_effect_profile != null:
+		profiles.append(adventurer.data.status_effect_profile)
+	if spell != null and spell.status_effect_profile != null:
+		profiles.append(spell.status_effect_profile)
+	return profiles
+
+func _roll_damage(adventurer: TDAdventurer, target: TDEnemy, damage_multiplier: float, status_profiles: Array) -> int:
+	var base_roll := randi_range(adventurer.data.damage_min, adventurer.data.damage_max)
+	var anti_swarm_multiplier := _anti_swarm_multiplier(target, status_profiles)
+	if anti_swarm_multiplier > 1.0:
+		target.play_anti_swarm_cue(anti_swarm_multiplier)
+	return int(base_roll * damage_multiplier * anti_swarm_multiplier)
+
+func _anti_swarm_multiplier(target: TDEnemy, status_profiles: Array) -> float:
+	var multiplier := 1.0
+	for profile in status_profiles:
+		if profile == null:
+			continue
+		if profile.anti_swarm_damage_multiplier <= 1.0:
+			continue
+		if profile.anti_swarm_min_enemies <= 1:
+			continue
+		var nearby_count := _count_enemies_in_radius(target.current_cell, profile.anti_swarm_radius)
+		if nearby_count >= profile.anti_swarm_min_enemies:
+			multiplier *= profile.anti_swarm_damage_multiplier
+	return multiplier
+
+func _count_enemies_in_radius(center: Vector2i, radius: int) -> int:
+	var count := 0
+	var safe_radius := maxi(radius, 0)
+	for enemy in enemies:
+		var dist := absi(enemy.current_cell.x - center.x) + absi(enemy.current_cell.y - center.y)
+		if dist <= safe_radius:
+			count += 1
+	return count
+
+func _apply_on_hit_statuses(target: TDEnemy, status_profiles: Array) -> void:
+	for profile in status_profiles:
+		if profile == null:
+			continue
+		target.apply_slow(profile.slow_duration_steps, profile.slow_move_period_bonus)
+		target.apply_armour_break(profile.armour_break_duration_steps, profile.armour_break_amount)
 
 ## Targets the valid enemy furthest along the path (closest to the castle).
 func _find_target(adventurer: TDAdventurer) -> TDEnemy:
@@ -478,9 +538,20 @@ func _check_end_conditions() -> void:
 	if castle_hp <= 0:
 		battle_over = true
 		step_timer.stop()
-		result_label.text = "Day Failed"
+		result_label.text = "Day Failed — Castle HP reached 0. Return to regroup."
 		return_button.visible = true
 		EventBus.day_lost.emit(day_data.day_index)
+		GameState.record_day_result(
+			day_data.day_index,
+			false,
+			GameState.currency - day_start_currency,
+			0,
+			castle_hp,
+			GameState.unlocked_day_index
+		)
+		SaveManager.save_game()
+		_update_wave_controls()
+		_update_hud()
 		return
 
 	if wave_active or not enemies.is_empty():
@@ -489,21 +560,52 @@ func _check_end_conditions() -> void:
 	if current_wave_index >= day_data.waves.size():
 		battle_over = true
 		step_timer.stop()
-		result_label.text = "Day Cleared!"
+		var unlocked_before := GameState.unlocked_day_index
 		return_button.visible = true
 		GameState.add_currency(day_data.completion_reward)
 		EventBus.day_won.emit(day_data.day_index)
+		var unlocked_after := GameState.unlocked_day_index
+		var unlock_text := "Unlocked Day %d." % unlocked_after if unlocked_after > unlocked_before else "No new day unlocked."
+		result_label.text = "Day Cleared! Bonus +%d coins. %s" % [day_data.completion_reward, unlock_text]
+		GameState.record_day_result(
+			day_data.day_index,
+			true,
+			GameState.currency - day_start_currency,
+			day_data.completion_reward,
+			castle_hp,
+			unlocked_after
+		)
+		SaveManager.save_game()
+		_update_wave_controls()
+		_update_hud()
 	else:
 		# Field is clear and nothing is spawning — pause so adventurers stop gaining
 		# attack points until the player calls the next wave, and re-open placement so the
 		# player can deploy reserves or reposition units during the breather.
 		step_timer.stop()
 		_open_placement()
-		result_label.text = "Wave cleared — place/move units, then call the next wave when ready"
+		result_label.text = "Wave cleared — place/move units, then call the next wave when ready."
+		_update_wave_controls()
+		_update_hud()
 
 func _update_hud() -> void:
 	castle_hp_label.text = "Castle HP: %d" % castle_hp
 	var wave_display := mini(current_wave_index + 1, day_data.waves.size())
-	wave_label.text = "Day %d — Wave %d/%d — Enemies left to spawn: %d" % [
-		day_data.day_index, wave_display, day_data.waves.size(), total_enemies_remaining_to_spawn
+	var mode_text := "Auto-call armed" if auto_call_next else "Manual call"
+	wave_label.text = "Day %d — Wave %d/%d — %s — Enemies left to spawn: %d" % [
+		day_data.day_index, wave_display, day_data.waves.size(), mode_text, total_enemies_remaining_to_spawn
 	]
+	wave_state_label.text = "Wave State: %s" % _wave_state_text()
+
+func _wave_state_text() -> String:
+	if battle_over:
+		return "Day complete" if castle_hp > 0 else "Day failed"
+	if not battle_started:
+		return "Prep"
+	if wave_active:
+		return "Spawning wave %d" % (current_wave_index + 1)
+	if enemies.is_empty():
+		if current_wave_index >= day_data.waves.size():
+			return "Final wave cleared"
+		return "Breather (placement open)"
+	return "Wave %d combat" % maxi(current_wave_index, 1)

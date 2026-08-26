@@ -33,6 +33,7 @@ var owned_items: Array = []  # Array[Dictionary] {def_id, instance_id}
 
 var unlocked_day_index: int = 1
 var selected_day_index: int = 1
+var last_day_result: Dictionary = {}
 var mine_depth: int = 0
 var mine_board_state: Array = []
 var _total_known_days_cache: int = -1  # -1 = not yet computed
@@ -43,6 +44,18 @@ func _ready() -> void:
 
 func _on_day_won(day_index: int) -> void:
 	unlocked_day_index = maxi(unlocked_day_index, day_index + 1)
+
+func record_day_result(day_index: int, did_win: bool, currency_delta: int, completion_reward: int, castle_hp_end: int, unlocked_day_after: int) -> void:
+	last_day_result = {
+		"played": true,
+		"day_index": day_index,
+		"did_win": did_win,
+		"currency_delta": currency_delta,
+		"completion_reward": completion_reward,
+		"castle_hp_end": castle_hp_end,
+		"unlocked_day_after": unlocked_day_after,
+		"timestamp_unix": int(Time.get_unix_time_from_system()),
+	}
 
 func total_known_days() -> int:
 	# Return cached value if already computed
@@ -99,9 +112,33 @@ func spend_material(material_id: String, amount: int) -> bool:
 	EventBus.materials_changed.emit(material_id, materials[material_id])
 	return true
 
-## Base + per-level slot count for a roster-capacity building (e.g. Quarters).
+func _building_def(building_id: String) -> BuildingData:
+	return load("res://data/buildings/%s.tres" % building_id) as BuildingData
+
+func _level_index(building_id: String) -> int:
+	return maxi(0, building_levels.get(building_id, 1) - 1)
+
+func _value_for_level(values: Array, idx: int, fallback: Variant) -> Variant:
+	if idx >= 0 and idx < values.size():
+		return values[idx]
+	return fallback
+
+## Returns a building capacity/slot cap, preferring per-level values from BuildingData when present.
 func capacity_for(building_id: String) -> int:
-	return 2 + building_levels.get(building_id, 1)
+	var fallback_capacity: int = 2 + building_levels.get(building_id, 1)
+	if building_id == "smelter":
+		fallback_capacity = building_levels.get(building_id, 1)
+	var def := _building_def(building_id)
+	if def == null:
+		return fallback_capacity
+	return int(_value_for_level(def.capacity_by_level, _level_index(building_id), fallback_capacity))
+
+func tavern_refresh_interval_seconds() -> int:
+	var fallback_interval: int = 21600
+	var def := _building_def("tavern")
+	if def == null:
+		return fallback_interval
+	return int(_value_for_level(def.tavern_refresh_seconds_by_level, _level_index("tavern"), fallback_interval))
 
 ## Spends currency and adds a new owned instance of the given AdventurerData id.
 func recruit_adventurer(def_id: String) -> bool:
@@ -181,9 +218,16 @@ const SMELT_RECIPES := {
 	"gold": {"output": "refined_gold", "seconds": 120},
 }
 
-## Number of concurrent smelting slots available, based on the Smelter's level.
+## Number of concurrent smelting slots available, driven by Smelter BuildingData capacity vector.
 func smelter_slot_capacity() -> int:
-	return building_levels.get("smelter", 1)
+	return capacity_for("smelter")
+
+func smelter_time_multiplier() -> float:
+	var fallback_multiplier: float = 1.0
+	var def := _building_def("smelter")
+	if def == null:
+		return fallback_multiplier
+	return float(_value_for_level(def.smelter_time_multiplier_by_level, _level_index("smelter"), fallback_multiplier))
 
 ## Consumes one raw material and queues it for smelting into its refined output.
 func start_smelting(material_id: String) -> bool:
@@ -194,10 +238,11 @@ func start_smelting(material_id: String) -> bool:
 	if not spend_material(material_id, 1):
 		return false
 	var recipe: Dictionary = SMELT_RECIPES[material_id]
+	var duration_seconds: int = maxi(1, int(round(float(recipe["seconds"]) * smelter_time_multiplier())))
 	smelter_queue.append({
 		"material_id": material_id,
 		"output_id": recipe["output"],
-		"complete_unix": Time.get_unix_time_from_system() + recipe["seconds"],
+		"complete_unix": Time.get_unix_time_from_system() + duration_seconds,
 	})
 	EventBus.smelting_started.emit(material_id)
 	return true

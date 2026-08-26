@@ -30,30 +30,58 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="CastleHPLabel" type="Label" parent="UI/HUD"]
-position = Vector2(20, 18)
+position = Vector2(20, 72)
 text = "Castle HP: 10"
 
 [node name="WaveLabel" type="Label" parent="UI/HUD"]
-position = Vector2(20, 48)
+offset_left = 20.0
+offset_top = 98.0
+offset_right = 1260.0
+offset_bottom = 146.0
+autowrap_mode = 2
 text = "Day 1 — Wave 1/3 — Enemies left to spawn: 23"
 
+[node name="WaveStateLabel" type="Label" parent="UI/HUD"]
+offset_left = 20.0
+offset_top = 150.0
+offset_right = 508.0
+offset_bottom = 174.0
+text = "Wave State: Prep"
+
 [node name="ResultLabel" type="Label" parent="UI/HUD"]
-position = Vector2(360, 18)
+offset_left = 20.0
+offset_top = 178.0
+offset_right = 1260.0
+offset_bottom = 226.0
+autowrap_mode = 2
 text = ""
 
 [node name="SelectedLabel" type="Label" parent="UI/HUD"]
-position = Vector2(20, 576)
+offset_left = 20.0
+offset_top = 560.0
+offset_right = 420.0
+offset_bottom = 584.0
 text = "Selected: none"
 
-[node name="Controls" type="HBoxContainer" parent="UI/HUD"]
-position = Vector2(20, 606)
+[node name="Controls" type="HFlowContainer" parent="UI/HUD"]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -108.0
+offset_right = -20.0
+offset_bottom = -20.0
 theme_override_constants/separation = 10
 
-[node name="PlacementButtonsContainer" type="HBoxContainer" parent="UI/HUD/Controls"]
+[node name="PlacementButtonsContainer" type="HFlowContainer" parent="UI/HUD/Controls"]
+size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
 [node name="StartBattleButton" type="Button" parent="UI/HUD/Controls"]
 text = "Call Wave 1"
+
+[node name="AutoCallButton" type="Button" parent="UI/HUD/Controls"]
+text = "Auto-Call: OFF"
 
 [node name="ReturnToCastleButton" type="Button" parent="UI/HUD/Controls"]
 text = "Return to Castle"

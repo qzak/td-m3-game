@@ -2,7 +2,7 @@ extends Control
 class_name TopResourceBar
 
 const ENTRY_DEFS: Array[Dictionary] = [
-	{"id": "currency", "label": "Gold", "swatch": Color("d7b34d"), "contexts": ["castle", "mine", "smith", "battle"]},
+	{"id": "currency", "label": "Coins", "swatch": Color("d7b34d"), "contexts": ["castle", "mine", "smith", "battle"]},
 	{"id": "copper", "label": "Copper", "swatch": Color("c9794d"), "contexts": ["castle", "mine", "battle"]},
 	{"id": "iron", "label": "Iron", "swatch": Color("aeb8bd"), "contexts": ["castle", "mine", "battle"]},
 	{"id": "gold", "label": "Gold Ore", "swatch": Color("e6c34f"), "contexts": ["castle", "mine", "battle"]},
@@ -11,12 +11,29 @@ const ENTRY_DEFS: Array[Dictionary] = [
 	{"id": "refined_gold", "label": "Ref. Gold", "swatch": Color("c8a63d"), "contexts": ["castle", "smith"]},
 ]
 
-@onready var chips: HBoxContainer = $Panel/Margin/Chips
+const CONTEXT_TITLES := {
+	"castle": "Castle",
+	"battle": "Battle",
+	"mine": "Mine",
+	"smith": "Smithy",
+}
+
+const CONTEXT_ORDER := {
+	"castle": ["currency", "refined_iron", "refined_copper", "refined_gold", "iron", "copper", "gold"],
+	"battle": ["currency", "iron", "copper", "gold"],
+	"mine": ["currency", "gold", "iron", "copper"],
+	"smith": ["currency", "refined_iron", "refined_copper", "refined_gold", "iron", "copper", "gold"],
+}
+
+@onready var context_label: Label = $Panel/Margin/ContentRow/ContextLabel
+@onready var chips: HBoxContainer = $Panel/Margin/ContentRow/Chips
 
 var _context := "castle"
 var _chip_rows: Dictionary = {}
 
 func _ready() -> void:
+	_set_mouse_passthrough(self)
+	resized.connect(_on_resized)
 	EventBus.currency_changed.connect(_on_currency_changed)
 	EventBus.materials_changed.connect(_on_materials_changed)
 	_build_chips()
@@ -40,19 +57,25 @@ func _build_chips() -> void:
 	for def in ENTRY_DEFS:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 		var swatch := ColorRect.new()
-		swatch.custom_minimum_size = Vector2(16, 16)
+		swatch.custom_minimum_size = Vector2(14, 14)
 		swatch.color = def["swatch"]
+		swatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(swatch)
 
 		var label := Label.new()
 		label.text = "%s: 0" % def["label"]
 		label.add_theme_font_size_override("font_size", 16)
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(label)
 
 		chips.add_child(row)
-		_chip_rows[def["id"]] = {"row": row, "label": label}
+		_chip_rows[def["id"]] = {"row": row, "label": label, "swatch": swatch}
+
+func _on_resized() -> void:
+	_refresh_visibility()
 
 func _refresh_all() -> void:
 	for def in ENTRY_DEFS:
@@ -69,12 +92,63 @@ func _refresh_chip_value(entry_id: String) -> void:
 	label.text = "%s: %d" % [display_name, value]
 
 func _refresh_visibility() -> void:
+	context_label.text = str(CONTEXT_TITLES.get(_context, _context.capitalize()))
+	var ordered_ids := _ordered_ids_for_context()
+	var fitted_ids: Array = []
+	var used_width := 0.0
+	var available_width := chips.size.x
+	if available_width <= 0.0:
+		available_width = size.x - context_label.get_combined_minimum_size().x - 24.0
+	var chip_gap := float(chips.get_theme_constant("separation"))
+	for entry_id in ordered_ids:
+		var row: HBoxContainer = _chip_rows[entry_id]["row"]
+		var row_width := row.get_combined_minimum_size().x
+		var extra_gap := chip_gap if not fitted_ids.is_empty() else 0.0
+		var must_keep := fitted_ids.is_empty()
+		if must_keep or used_width + extra_gap + row_width <= available_width:
+			fitted_ids.append(entry_id)
+			used_width += extra_gap + row_width
+	var visible_index := 0
+	var primary_id: String = str(fitted_ids[0]) if not fitted_ids.is_empty() else ""
 	for def in ENTRY_DEFS:
 		var entry_id: String = def["id"]
 		if not _chip_rows.has(entry_id):
 			continue
 		var row: HBoxContainer = _chip_rows[entry_id]["row"]
-		row.visible = _is_visible_in_context(def)
+		var visible := fitted_ids.has(entry_id)
+		row.visible = visible
+		if visible:
+			chips.move_child(row, visible_index)
+			visible_index += 1
+	_apply_primary_style(primary_id)
+
+func _ordered_ids_for_context() -> Array:
+	var preferred: Array = CONTEXT_ORDER.get(_context, [])
+	var ordered: Array = []
+	for entry_id in preferred:
+		if _chip_rows.has(entry_id):
+			var def := _def_for(entry_id)
+			if not def.is_empty() and _is_visible_in_context(def):
+				ordered.append(entry_id)
+	for def in ENTRY_DEFS:
+		var entry_id: String = def["id"]
+		if ordered.has(entry_id):
+			continue
+		if _is_visible_in_context(def):
+			ordered.append(entry_id)
+	return ordered
+
+func _apply_primary_style(primary_id: String) -> void:
+	for entry_id in _chip_rows:
+		var chip_entry: Dictionary = _chip_rows[entry_id]
+		var row: HBoxContainer = chip_entry["row"]
+		var label: Label = chip_entry["label"]
+		var swatch: ColorRect = chip_entry["swatch"]
+		var is_primary: bool = entry_id == primary_id and row.visible
+		label.add_theme_font_size_override("font_size", 18 if is_primary else 16)
+		label.add_theme_color_override("font_color", Color("ffffff") if is_primary else Color("d7dcd8"))
+		swatch.custom_minimum_size = Vector2(18, 18) if is_primary else Vector2(14, 14)
+		row.modulate = Color("ffffff") if is_primary else Color("e6ece8")
 
 func _is_visible_in_context(def: Dictionary) -> bool:
 	var contexts: Array = def.get("contexts", [])
@@ -84,7 +158,19 @@ func _is_visible_in_context(def: Dictionary) -> bool:
 	return false
 
 func _label_for(entry_id: String) -> String:
+	var def := _def_for(entry_id)
+	if not def.is_empty():
+		return def["label"]
+	return entry_id.capitalize()
+
+func _def_for(entry_id: String) -> Dictionary:
 	for def in ENTRY_DEFS:
 		if def["id"] == entry_id:
-			return def["label"]
-	return entry_id.capitalize()
+			return def
+	return {}
+
+func _set_mouse_passthrough(root: Control) -> void:
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for child in root.get_children():
+		if child is Control:
+			_set_mouse_passthrough(child)

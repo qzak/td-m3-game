@@ -9,8 +9,13 @@ script = ExtResource("1")
 
 [node name="Title" type="Label" parent="."]
 position = Vector2(20, 20)
-text = "War Room — choose a day to defend the castle"
+text = "War Room — choose a Day battle; wins unlock the next Day"
+
+[node name="LastResultLabel" type="Label" parent="."]
+position = Vector2(20, 52)
+size_flags_horizontal = 3
+text = "Last Day Result: none yet"
 
 [node name="DayList" type="VBoxContainer" parent="."]
-position = Vector2(20, 60)
+position = Vector2(20, 94)
 theme_override_constants/separation = 8

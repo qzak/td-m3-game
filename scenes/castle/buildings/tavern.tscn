@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/castle/tavern_controller.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/castle/buildings/building_upgrade_row.tscn" id="2"]
 
 [node name="Tavern" type="Control"]
 script = ExtResource("1")
@@ -9,7 +10,7 @@ anchor_bottom = 1.0
 
 [node name="Title" type="Label" parent="."]
 position = Vector2(20, 20)
-text = "Tavern — sign contracts with available adventurers"
+text = "Tavern — recruit adventurers; upgrades add contracts and faster refresh"
 
 [node name="RerollButton" type="Button" parent="."]
 position = Vector2(20, 40)
@@ -17,3 +18,7 @@ text = "Reroll (20 gold)"
 
 [node name="RosterList" type="VBoxContainer" parent="."]
 position = Vector2(20, 80)
+
+[node name="UpgradeRow" parent="." instance=ExtResource("2")]
+building_id = "tavern"
+position = Vector2(20, 400)

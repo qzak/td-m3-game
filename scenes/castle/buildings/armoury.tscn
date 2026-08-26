@@ -10,7 +10,7 @@ anchor_bottom = 1.0
 
 [node name="Title" type="Label" parent="."]
 position = Vector2(20, 20)
-text = "Armoury — equip crafted items onto your active roster"
+text = "Armoury — equip crafted gear; upgrades add item storage"
 
 [node name="CapacityLabel" type="Label" parent="."]
 position = Vector2(20, 50)

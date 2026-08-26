@@ -7,5 +7,5 @@ script = ExtResource("1")
 id = "towers"
 display_name = "Towers"
 max_level = 5
-upgrade_material_costs = Array[Dictionary]([{"copper": 5}, {"iron": 5}, {"iron": 10, "copper": 10}, {"gold": 10}])
-upgrade_currency_costs = Array[int]([150, 300, 500, 900])
+upgrade_material_costs = Array[Dictionary]([{"copper": 8}, {"iron": 8}, {"iron": 14, "copper": 12}, {"gold": 12}])
+upgrade_currency_costs = Array[int]([180, 380, 700, 1200])

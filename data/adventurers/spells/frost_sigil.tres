@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SpellData" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/adventurers/spell_data.gd" id="1"]
+[ext_resource type="Resource" path="res://data/tower_defense/status_profiles/frost_sigil_slow.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = "frost_sigil"
+display_name = "Frost Sigil"
+is_aoe = false
+damage_multiplier = 1.3
+status_effect_profile = ExtResource("2")

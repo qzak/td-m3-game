@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AdventurerData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/adventurers/adventurer_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "druid"
+display_name = "The Druid"
+rarity = 2
+type = 2
+damage_min = 3
+damage_max = 6
+range_min = 3
+range_max = 5
+attack_pool = 110
+attack_regen = 35
+recruit_cost = 220
+spell_ids = Array[String](["thorn_nova", "frost_sigil"])

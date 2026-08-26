@@ -20,4 +20,5 @@ enum AdventurerType { PHYSICAL_MELEE, PHYSICAL_RANGED, MAGIC }
 @export var recruit_cost: int = 100
 
 @export var spell_ids: Array[String] = []  # only used when type == MAGIC
+@export var status_effect_profile: Resource  # optional baseline on-hit effects for this unit's attacks
 @export var sprite: Texture2D

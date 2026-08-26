@@ -5,12 +5,17 @@ class_name QuartersController
 @onready var active_list: VBoxContainer = $ActiveList
 @onready var available_list: VBoxContainer = $AvailableList
 @onready var capacity_label: Label = $CapacityLabel
+@onready var upgrade_row: BuildingUpgradeRow = $UpgradeRow
 
 func _ready() -> void:
+	upgrade_row.building_id = "quarters"
+	upgrade_row.refresh()
+	EventBus.building_upgraded.connect(_on_building_upgraded)
 	_build_rows()
 
 func refresh() -> void:
 	_build_rows()
+	upgrade_row.refresh()
 
 func _build_rows() -> void:
 	for child in active_list.get_children():
@@ -65,3 +70,7 @@ func _on_remove_pressed(def_id: String) -> void:
 	GameState.set_active_roster(roster)
 	_build_rows()
 
+func _on_building_upgraded(building_id: String, _new_level: int) -> void:
+	if building_id != "quarters":
+		return
+	_build_rows()

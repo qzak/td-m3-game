@@ -10,7 +10,7 @@ const CLEAR_ANIMATION_TIME := 0.18
 const GRAVITY_ANIMATION_TIME := 0.22
 const DESCEND_ANIMATION_TIME := 0.3
 
-const BOARD_ORIGIN := Vector2(360, 54)
+const BOARD_ORIGIN := Vector2(360, 72)
 const CELL_SIZE := 56.0
 const TILE_COLORS := {
 	"dirt": Color("8f684b"),
@@ -31,9 +31,10 @@ class AnimatedTile extends RefCounted:
 @onready var status_label: Label = $UI/StatusLabel
 @onready var back_button: Button = $UI/BackButton
 @onready var descend_button: Button = $UI/DescendButton
+@onready var descend_progress_label: Label = $UI/DescendProgressLabel
 @onready var top_resource_bar: Control = $UI/TopResourceBar
 
-var board: Node
+var board: MineBoard
 var selected_cell := Vector2i(-1, -1)
 var is_animating := false
 var animation_queue: Array = []
@@ -80,7 +81,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if cell.x >= 0 and cell.x < BOARD_WIDTH and cell.y >= 0 and cell.y < BOARD_HEIGHT:
 			if selected_cell.x < 0:
 				selected_cell = cell
-				status_label.text = "Select a tile or empty space in this row"
+				status_label.text = "Move along rows to clear the top edge (5 rows)"
 			else:
 				var moved: bool = board.try_move_to_empty(selected_cell, cell) if board.tiles[cell.y][cell.x] == null else board.try_swap(selected_cell, cell)
 				if moved:
@@ -124,11 +125,15 @@ func _on_descend_pressed() -> void:
 	if board.descend():
 		_set_status("Descending...")
 	else:
-		_set_status("Clear the top five rows first")
+		_set_status("Not ready: clear top edge rows (%d/5)" % board.top_rows_clear_count())
 
 func _update_hud() -> void:
 	depth_label.text = "Mine depth: %d" % board.depth
-	descend_button.disabled = is_animating or not board.can_descend()
+	var clear_rows := board.top_rows_clear_count()
+	var ready := clear_rows >= 5
+	descend_button.disabled = is_animating or not ready
+	descend_progress_label.text = "Descend ready: %d/5 top rows clear" % clear_rows
+	descend_progress_label.modulate = Color("b6e59c") if ready else Color("cfd6d2")
 
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, 1280, 720), Color("182329"))
@@ -185,7 +190,7 @@ func _play_animation_queue() -> void:
 		_set_status(post_animation_status)
 		post_animation_status = ""
 	elif status_label.text == "Animating mine..." or status_label.text == "Resolving..." or status_label.text == "Descending...":
-		_set_status("Select a tile or empty space in this row")
+		_set_status("Move along rows to clear the top edge (5 rows)")
 	queue_redraw()
 
 func _play_clear_animation(cells: Array) -> void:

@@ -5,7 +5,7 @@
 [node name="BuildingUpgradeRow" type="Control"]
 script = ExtResource("1")
 anchor_right = 1.0
-custom_minimum_size = Vector2(0, 60)
+custom_minimum_size = Vector2(0, 78)
 
 [node name="Row" type="HBoxContainer" parent="."]
 anchor_right = 1.0
@@ -17,6 +17,9 @@ text = "Building — Level 1/5"
 
 [node name="CostLabel" type="Label" parent="Row/Labels"]
 text = "Upgrade: —"
+
+[node name="EffectLabel" type="Label" parent="Row/Labels"]
+text = "Now/Next: —"
 
 [node name="UpgradeButton" type="Button" parent="Row"]
 text = "Upgrade"

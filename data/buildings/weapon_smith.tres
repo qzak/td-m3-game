@@ -7,5 +7,5 @@ script = ExtResource("1")
 id = "weapon_smith"
 display_name = "Weapon Smith"
 max_level = 5
-upgrade_material_costs = Array[Dictionary]([{"copper": 5}, {"iron": 5}, {"iron": 10}, {"gold": 5}])
-upgrade_currency_costs = Array[int]([150, 300, 500, 800])
+upgrade_material_costs = Array[Dictionary]([{"copper": 6}, {"iron": 8}, {"iron": 14, "gold": 3}, {"gold": 10}])
+upgrade_currency_costs = Array[int]([170, 360, 620, 980])

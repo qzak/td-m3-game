@@ -25,6 +25,7 @@ func save_game() -> void:
 		"tavern_reroll_count": GameState.tavern_reroll_count,
 		"smelter_queue": GameState.smelter_queue,
 		"unlocked_day_index": GameState.unlocked_day_index,
+		"last_day_result": GameState.last_day_result,
 		"mine_depth": GameState.mine_depth,
 		"mine_board_state": GameState.mine_board_state,
 	}
@@ -57,6 +58,7 @@ func load_game() -> bool:
 	GameState.tavern_reroll_count = parsed.get("tavern_reroll_count", 0)
 	GameState.smelter_queue = parsed.get("smelter_queue", [])
 	GameState.unlocked_day_index = parsed.get("unlocked_day_index", 0)
+	GameState.last_day_result = parsed.get("last_day_result", {})
 	GameState.mine_depth = parsed.get("mine_depth", 0)
 	GameState.mine_board_state = parsed.get("mine_board_state", [])
 	return true

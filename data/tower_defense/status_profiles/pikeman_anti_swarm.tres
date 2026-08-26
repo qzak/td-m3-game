@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="StatusEffectProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/tower_defense/status_effect_profile.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "pikeman_anti_swarm"
+display_name = "Phalanx Reach"
+anti_swarm_radius = 1
+anti_swarm_min_enemies = 2
+anti_swarm_damage_multiplier = 1.15

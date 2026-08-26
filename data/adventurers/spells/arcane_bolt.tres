@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="SpellData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="SpellData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://data/adventurers/spell_data.gd" id="1"]
+[ext_resource type="Resource" path="res://data/tower_defense/status_profiles/arcane_armour_break.tres" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -8,3 +9,4 @@ id = "arcane_bolt"
 display_name = "Arcane Bolt"
 is_aoe = false
 damage_multiplier = 1.6
+status_effect_profile = ExtResource("2")

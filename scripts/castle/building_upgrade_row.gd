@@ -5,6 +5,7 @@ class_name BuildingUpgradeRow
 
 @onready var name_level_label: Label = $Row/Labels/NameLevelLabel
 @onready var cost_label: Label = $Row/Labels/CostLabel
+@onready var effect_label: Label = $Row/Labels/EffectLabel
 @onready var upgrade_button: Button = $Row/UpgradeButton
 
 func _ready() -> void:
@@ -29,6 +30,7 @@ func _refresh() -> void:
 
 	var level: int = GameState.building_levels.get(building_id, 1)
 	name_level_label.text = "%s — Level %d/%d" % [def.display_name, level, def.max_level]
+	_set_effect_text(def, level)
 
 	if level >= def.max_level:
 		cost_label.text = "Max level"
@@ -65,8 +67,69 @@ func _refresh() -> void:
 func _show_missing_building_state() -> void:
 	name_level_label.text = "(no building configured)"
 	cost_label.text = "—"
+	effect_label.text = "Now/Next: —"
 	upgrade_button.disabled = true
 	upgrade_button.visible = false
+
+func _set_effect_text(def: BuildingData, level: int) -> void:
+	var current_text := _effect_for_level(def, level)
+	if level >= def.max_level:
+		effect_label.text = "Now: %s (max)" % current_text
+		return
+	var next_text := _effect_for_level(def, level + 1)
+	effect_label.text = "Now/Next: %s -> %s" % [current_text, next_text]
+
+func _effect_for_level(def: BuildingData, level: int) -> String:
+	match building_id:
+		"tavern":
+			var cap := _int_for_level(def.capacity_by_level, level, 2 + level)
+			var refresh_seconds := _int_for_level(def.tavern_refresh_seconds_by_level, level, 21600)
+			return "Contracts %d, refresh %s" % [cap, _duration_text(refresh_seconds)]
+		"quarters":
+			return "Active slots %d" % _int_for_level(def.capacity_by_level, level, 2 + level)
+		"smelter":
+			var slots := _int_for_level(def.capacity_by_level, level, level)
+			var multiplier := _float_for_level(def.smelter_time_multiplier_by_level, level, 1.0)
+			return "Queue %d, smelt time x%.1f" % [slots, multiplier]
+		"armoury":
+			return "Item slots %d" % _int_for_level(def.capacity_by_level, level, 2 + level)
+		"weapon_smith", "armour_smith":
+			return "Unlocks recipes up to Lv%d" % level
+		"towers":
+			var tower_data: TowerData = load("res://data/buildings/towers_stats.tres")
+			if tower_data == null:
+				return "Tower stats unavailable"
+			var stats := tower_data.stats_for_level(level)
+			return "DMG %d-%d, RNG %d-%d, Regen %d" % [
+				int(stats["damage_min"]),
+				int(stats["damage_max"]),
+				int(stats["range_min"]),
+				int(stats["range_max"]),
+				int(stats["attack_regen"]),
+			]
+		_:
+			if not def.capacity_by_level.is_empty():
+				return "Cap %d" % _int_for_level(def.capacity_by_level, level, 2 + level)
+	return "No effect data"
+
+func _int_for_level(values: Array[int], level: int, fallback: int) -> int:
+	var index := level - 1
+	if index >= 0 and index < values.size():
+		return values[index]
+	return fallback
+
+func _float_for_level(values: Array[float], level: int, fallback: float) -> float:
+	var index := level - 1
+	if index >= 0 and index < values.size():
+		return values[index]
+	return fallback
+
+func _duration_text(total_seconds: int) -> String:
+	if total_seconds % 3600 == 0:
+		return "%dh" % int(total_seconds / 3600)
+	if total_seconds % 60 == 0:
+		return "%dm" % int(total_seconds / 60)
+	return "%ds" % total_seconds
 
 func _can_afford(currency_cost: int, material_costs: Dictionary) -> bool:
 	if GameState.currency < currency_cost:

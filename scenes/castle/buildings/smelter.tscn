@@ -10,7 +10,7 @@ anchor_bottom = 1.0
 
 [node name="Title" type="Label" parent="."]
 position = Vector2(20, 20)
-text = "Smelter — refine raw materials into refined materials"
+text = "Smelter — refine ore; upgrades add queue slots and faster smelts"
 
 [node name="MaterialListTitle" type="Label" parent="."]
 position = Vector2(20, 60)
