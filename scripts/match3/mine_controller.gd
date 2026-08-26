@@ -5,6 +5,7 @@ const BOARD_SCRIPT = preload("res://scripts/match3/board.gd")
 const BOARD_WIDTH := 10
 const BOARD_HEIGHT := 10
 const SWAP_ANIMATION_TIME := 0.14
+const MOVE_TO_EMPTY_ANIMATION_TIME := 0.16
 const CLEAR_ANIMATION_TIME := 0.18
 const GRAVITY_ANIMATION_TIME := 0.22
 const DESCEND_ANIMATION_TIME := 0.3
@@ -30,6 +31,7 @@ class AnimatedTile extends RefCounted:
 @onready var status_label: Label = $UI/StatusLabel
 @onready var back_button: Button = $UI/BackButton
 @onready var descend_button: Button = $UI/DescendButton
+@onready var top_resource_bar: Control = $UI/TopResourceBar
 
 var board: Node
 var selected_cell := Vector2i(-1, -1)
@@ -61,6 +63,7 @@ func _ready() -> void:
 	_on_board_changed()
 	back_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/castle/castle.tscn"))
 	descend_button.pressed.connect(_on_descend_pressed)
+	top_resource_bar.set_context("mine")
 	_update_hud()
 	set_process(true)
 	queue_redraw()
@@ -163,6 +166,8 @@ func _play_animation_queue() -> void:
 		match event.get("type", ""):
 			"swap":
 				await _play_swap_animation(event)
+			"move":
+				await _play_movement_animation(event.get("moves", []), MOVE_TO_EMPTY_ANIMATION_TIME)
 			"clear":
 				await _play_clear_animation(event.get("cells", []))
 			"gravity":

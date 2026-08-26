@@ -23,6 +23,7 @@ const ADVENTURER_SCENE := preload("res://scenes/tower_defense/adventurer_unit.ts
 @onready var start_button: Button = $UI/HUD/Controls/StartBattleButton
 @onready var return_button: Button = $UI/HUD/Controls/ReturnToCastleButton
 @onready var placement_buttons_container: HBoxContainer = $UI/HUD/Controls/PlacementButtonsContainer
+@onready var top_resource_bar: Control = $UI/HUD/TopResourceBar
 
 var enemies: Array[TDEnemy] = []
 var adventurers: Array[TDAdventurer] = []
@@ -73,6 +74,7 @@ func _ready() -> void:
 	return_button.pressed.connect(_on_return_button_pressed)
 
 	_spawn_towers()
+	top_resource_bar.set_context("battle")
 
 	_update_start_button_label()
 	_update_hud()

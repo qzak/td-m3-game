@@ -8,9 +8,9 @@ alongside code changes so it stays a reliable reference. See
 
 | File | Responsibility |
 |---|---|
-| [scenes/castle/castle.tscn](../../scenes/castle/castle.tscn) | Hub scene: panel-switching buttons, day selection, and shared resource HUD. Currently the project's run scene. |
-| [scenes/ui/resource_hud.tscn](../../scenes/ui/resource_hud.tscn) / [scripts/ui/resource_hud.gd](../../scripts/ui/resource_hud.gd) (`ResourceHUD`) | Global compact resource strip with hover/tap-expand details, shared across Castle/TD/Mine. |
-| [scripts/castle/castle_controller.gd](../../scripts/castle/castle_controller.gd) (`CastleController`) | Loads the save on `_ready`, toggles between Tavern/Quarters panels, starts the TD battle scene. |
+| [scenes/castle/castle.tscn](../../scenes/castle/castle.tscn) | Hub scene with focus-mode building entry, War Room day selection, and shared top resource bar. Currently the project's run scene. |
+| [scenes/ui/top_resource_bar.tscn](../../scenes/ui/top_resource_bar.tscn) / [scripts/ui/top_resource_bar.gd](../../scripts/ui/top_resource_bar.gd) (`TopResourceBar`) | Shared full-width resource strip with placeholder icon swatches, context filtering, and live `EventBus` updates. |
+| [scripts/castle/castle_controller.gd](../../scripts/castle/castle_controller.gd) (`CastleController`) | Loads the save on `_ready`, controls focus-mode panel flow, and starts TD days from the War Room. |
 | [scenes/castle/buildings/tavern.tscn](../../scenes/castle/buildings/tavern.tscn) / [scripts/castle/tavern_controller.gd](../../scripts/castle/tavern_controller.gd) (`TavernController`) | Real-time-refreshed adventurer roster; "Sign Contract" spends currency and adds to `GameState.owned_adventurers`. |
 | [scenes/castle/buildings/quarters.tscn](../../scenes/castle/buildings/quarters.tscn) / [scripts/castle/quarters_controller.gd](../../scripts/castle/quarters_controller.gd) (`QuartersController`) | Capacity-limited toggle list to choose `GameState.active_roster_ids` for the next Day. |
 | [scenes/castle/buildings/smelter.tscn](../../scenes/castle/buildings/smelter.tscn) / [scripts/castle/smelter_controller.gd](../../scripts/castle/smelter_controller.gd) (`SmelterController`) | Real-time smelting queue: turns raw materials into refined materials. |
@@ -19,6 +19,7 @@ alongside code changes so it stays a reliable reference. See
 | [scripts/castle/smith_controller_base.gd](../../scripts/castle/smith_controller_base.gd) (`SmithControllerBase`) | Shared craft-list UI/logic for the two Smiths, configured per-subclass via `building_id` + `recipe_ids`. |
 | [scenes/castle/buildings/armoury.tscn](../../scenes/castle/buildings/armoury.tscn) / [scripts/castle/armoury_controller.gd](../../scripts/castle/armoury_controller.gd) (`ArmouryController`) | Lists owned crafted items and equips/unequips them onto active-roster adventurers. |
 | [scenes/castle/buildings/towers.tscn](../../scenes/castle/buildings/towers.tscn) / [scripts/castle/towers_panel.gd](../../scripts/castle/towers_panel.gd) (`TowersPanel`) | Minimal panel — Towers has no other player-facing UI yet, just its upgrade row. |
+| [scenes/castle/buildings/war_room.tscn](../../scenes/castle/buildings/war_room.tscn) / [scripts/castle/war_room_controller.gd](../../scripts/castle/war_room_controller.gd) (`WarRoomController`) | Dedicated day-selection panel; emits day-start requests while preserving unlock/lock behavior. |
 | [scenes/castle/buildings/building_upgrade_row.tscn](../../scenes/castle/buildings/building_upgrade_row.tscn) / [scripts/castle/building_upgrade_row.gd](../../scripts/castle/building_upgrade_row.gd) (`BuildingUpgradeRow`) | Reusable component embedded in every building panel: shows current/next level and cost, spends currency+materials via `GameState.upgrade_building()`. |
 | [data/buildings/*.tres](../../data/buildings/) | `BuildingData` cost resources (`max_level`, per-level currency/material costs) — one per building id, including `towers.tres` (cost-only; `towers_stats.tres`/`TowerData` still holds Towers' per-level combat stats). |
 | [data/items/*.tres](../../data/items/) | `ItemData` resources for the 6 craftable weapons/armour pieces (see Weapon/Armour Smith section below). |
@@ -28,23 +29,26 @@ alongside code changes so it stays a reliable reference. See
 ## Hub Flow
 
 - `castle.tscn` is the project's boot scene (`run/main_scene` in `project.godot`). `CastleController._ready()`
-  calls `SaveManager.load_game()` immediately, then wires up all seven building buttons (Tavern,
-  Quarters, Smelter, Weapon Smith, Armour Smith, Armoury, Towers), the Enter Mine button, and the
-  Day-selection list (see [docs/systems/tower_defense.md](tower_defense.md#day-selection)).
-- Exactly one building panel is visible at a time — `_show_panel()` iterates `all_panels` (all seven
-  panel instances) setting `visible = (p == panel)`, and calls `panel.refresh()` if the panel exposes
-  that method (every panel controller does; `TowersPanel` forwards it to its embedded upgrade row).
-- `_build_day_list()` builds one "Start Day N" button (for `N` from `1` to `GameState.total_known_days()`)
-  in the `DayList` container, disabling/labeling `(Locked)` any day past `GameState.unlocked_day_index`.
-  Pressing an unlocked one sets `GameState.selected_day_index` and changes to `td_battle.tscn`.
+  calls `SaveManager.load_game()` immediately, then wires up all building buttons (Tavern, Quarters,
+  Smelter, Weapon Smith, Armour Smith, Armoury, Towers, War Room) plus Enter Mine.
+- Exactly one building panel is visible at a time — `_show_panel()` iterates `all_panels`, sets
+  `visible = (p == panel)`, and calls `panel.refresh()` when available.
+- Entering any building now enables **focus mode**: the main building button grid hides, a dedicated
+  `Back` button appears, and the chosen panel becomes the primary view. Pressing `Back` returns to
+  the root building list.
+- Day selection moved out of the root Castle screen into the **War Room** panel. War Room builds one
+  "Start Day N" button (`1..GameState.total_known_days()`), marks any day past
+  `GameState.unlocked_day_index` as `(Locked)`, and emits the selected day back to Castle to start
+  `td_battle.tscn`.
 - On returning from a battle (`TDBattleController`'s "Return to Castle" button, shown on
   `day_won`/`day_lost`), the scene reloads `castle.tscn` fresh — `CastleController._ready()` runs
   again and reloads the save, so anything `SaveManager` persisted mid-battle carries over (including
   any newly-unlocked Day).
 - Layout pass: Castle now uses a left rail for building/day controls and keeps the currently-open
   building panel offset to the right to avoid top-bar overlap.
-- The shared `ResourceHUD` lives in the top-right: its compact row is always visible, and hovering
-  (desktop) or tapping (mobile) expands a fuller readout including refined materials.
+- The shared `TopResourceBar` spans the top edge of the screen. Castle uses the `castle` context by
+  default and switches to the `smith` context when Smelter/Weapon Smith/Armour Smith are focused to
+  prioritize refined-material visibility.
 
 ## Building Upgrades
 

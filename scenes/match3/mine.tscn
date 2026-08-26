@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/match3/mine_controller.gd" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/ui/resource_hud.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/ui/top_resource_bar.tscn" id="2"]
 
 [node name="Mine" type="Node2D"]
 script = ExtResource("1")
@@ -40,4 +40,4 @@ offset_right = 190.0
 offset_bottom = 686.0
 text = "Return to Castle"
 
-[node name="ResourceHUD" parent="UI" instance=ExtResource("2")]
+[node name="TopResourceBar" parent="UI" instance=ExtResource("2")]

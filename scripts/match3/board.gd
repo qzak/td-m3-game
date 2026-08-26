@@ -103,8 +103,19 @@ func try_move_to_empty(source: Vector2i, destination: Vector2i) -> bool:
 	var tile = tiles[source.y][source.x]
 	if tile == null or tiles[destination.y][destination.x] != null:
 		return false
+	# Commit the horizontal move into the empty destination
 	tiles[destination.y][destination.x] = tile
 	tiles[source.y][source.x] = null
+	# Emit a dedicated pre-gravity move animation event using the same "moves" payload convention
+	var pre_move := [{
+		"from": source,
+		"to": destination,
+		"tile_id": tile.id,
+	}]
+	animation_event.emit({
+		"type": "move",
+		"moves": pre_move,
+	})
 	var gravity_moves := _apply_gravity()
 	if not gravity_moves.is_empty():
 		animation_event.emit({

@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://scripts/tower_defense/grid_map.gd" id="2"]
 [ext_resource type="Resource" path="res://data/waves/day_1.tres" id="3"]
 [ext_resource type="Resource" path="res://data/buildings/towers_stats.tres" id="7"]
-[ext_resource type="PackedScene" path="res://scenes/ui/resource_hud.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://scenes/ui/top_resource_bar.tscn" id="8"]
 
 [node name="TDBattle" type="Node2D"]
 script = ExtResource("1")
@@ -58,4 +58,4 @@ text = "Call Wave 1"
 [node name="ReturnToCastleButton" type="Button" parent="UI/HUD/Controls"]
 text = "Return to Castle"
 
-[node name="ResourceHUD" parent="UI/HUD" instance=ExtResource("8")]
+[node name="TopResourceBar" parent="UI/HUD" instance=ExtResource("8")]

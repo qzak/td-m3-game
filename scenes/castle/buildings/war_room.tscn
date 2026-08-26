@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/castle/war_room_controller.gd" id="1"]
+
+[node name="WarRoom" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Title" type="Label" parent="."]
+position = Vector2(20, 20)
+text = "War Room — choose a day to defend the castle"
+
+[node name="DayList" type="VBoxContainer" parent="."]
+position = Vector2(20, 60)
+theme_override_constants/separation = 8
