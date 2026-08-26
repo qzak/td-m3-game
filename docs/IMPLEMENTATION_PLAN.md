@@ -248,3 +248,95 @@ Validation:
    - Visual continuity pass
    - Docs updates under `docs/systems/`
    - Validation/smoke checks
+
+## 9. Suggested Next Steps (Post Milestone 12)
+
+### 9.1 Gameplay Balancing Pass (highest ROI)
+
+Goal: tighten pacing and reward curves so Castle/TD/Mine progression feels consistently rewarding.
+
+Implementation slices:
+1. Rebalance Days 1–3 wave pacing/rewards in `data/waves/day_*.tres`.
+2. Tune TD combat feel (attack cadence, tower contribution, bounty pacing) with minimal script/data edits.
+3. Tune Mine income vs smith/upgrade costs so progression stays healthy across short and long sessions.
+
+Validation:
+- Headless script check.
+- Manual balance smoke: complete Day 1 and one Mine descend loop, then verify meaningful spend options in Castle.
+
+### 9.2 Content Expansion (data-first)
+
+Goal: increase strategic variety without large code churn.
+
+Implementation slices:
+1. Add new adventurers/enemies/spells via `data/adventurers/`, `data/adventurers/spells/`, `data/enemies/`.
+2. Add Day 4+ content in `data/waves/day_<n>.tres` using existing dynamic day discovery.
+3. Add minimal script hooks only when truly required by new data behavior.
+
+Validation:
+- Headless script check.
+- Castle roster + TD wave smoke covering at least one newly-authored unit and one new day file.
+
+### 9.3 Castle Progression Depth
+
+Goal: give clearer medium/long-term goals in the hub economy.
+
+Implementation slices:
+1. Expand building effect differentiation (not only cost gates) while preserving save compatibility.
+2. Add clearer unlock progression between Tavern/Quarters/Smith/Armoury/Towers/War Room decisions.
+3. Improve in-panel progression readability (what upgrades unlock next).
+
+Validation:
+- Headless script check.
+- Castle-only smoke across every building panel with upgrade/craft/recruit loops.
+
+### 9.4 TD Tactical Depth
+
+Goal: deepen decision-making per wave beyond raw DPS.
+
+Implementation slices:
+1. Add one or two new status interactions (e.g., slow, armour break, anti-swarm).
+2. Ensure effects are data-driven where possible and visible in battle feedback.
+3. Rebalance enemy ability mix to force roster/spell adaptation.
+
+Validation:
+- Headless script check.
+- TD combat smoke covering each new status effect in at least one wave.
+
+### 9.5 UX Readability and Feedback Pass
+
+Goal: make state changes and economy feedback obvious at a glance.
+
+Implementation slices:
+1. Refine `TopResourceBar` emphasis rules and chip ordering by context.
+2. Improve key feedback moments (mine clear, descend available, wave transitions, day result).
+3. Confirm no input-blocking regressions from overlay controls.
+
+Validation:
+- Headless script check.
+- UI smoke in Castle, Mine, TD at baseline 1280x720.
+
+### 9.6 Audio + VFX Pass
+
+Goal: increase moment-to-moment game feel with lightweight but coherent feedback.
+
+Implementation slices:
+1. Add SFX hooks for attack, hit, death, match clear, descend, and day win/loss.
+2. Add simple VFX pulses/flashes for high-signal events.
+3. Keep style aligned with cozy pixel-fantasy tone.
+
+Validation:
+- Headless script check.
+- Manual playthrough of one full Day + one Mine session confirming feedback coverage.
+
+### 9.7 Robustness + Playtest Workflow
+
+Goal: make iteration safer and faster as content expands.
+
+Implementation slices:
+1. Keep `godot --headless --path "D:\td-m3-game" --check-only --quit` as required gate after each packet.
+2. Maintain a compact manual smoke checklist for Castle, TD, and Mine flows.
+3. Document balancing assumptions and outcomes in `docs/systems/*.md` as behavior evolves.
+
+Validation:
+- Verify every implementation packet includes exact checks run and outcomes.
