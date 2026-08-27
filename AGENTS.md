@@ -18,7 +18,7 @@ This file helps coding agents get productive quickly in this repository.
 
 ## Start Here (Reading Order)
 
-1. `docs/IMPLEMENTATION_PLAN.md` for the overall architecture and milestone status.
+1. `docs/IMPLEMENTATION_PLAN.md` for the pending implementation backlog.
 2. `docs/systems/tower_defense.md` for the TD loop, pathing, spawning, and day/wave flow.
 3. `docs/systems/match3.md` for board rules, descent mechanic, and reward logic.
 4. `docs/systems/castle.md` for building panels, progression, and scene flow.
@@ -63,6 +63,13 @@ If a scene/system behavior was changed, also run that flow in editor when possib
 - Prefer extending data-driven content in `data/*.tres` over hardcoding gameplay values.
 - Keep public signal names and event flow stable unless all callers are updated.
 - When changing cross-system behavior, update the corresponding doc in `docs/systems/`.
+
+## Implementation Plan Hygiene (Required)
+
+- Treat `docs/IMPLEMENTATION_PLAN.md` as a **pending-features-only** backlog.
+- When implementing a backlog item, remove that item from `docs/IMPLEMENTATION_PLAN.md` in the same change.
+- Do not keep completion history in `docs/IMPLEMENTATION_PLAN.md`; put shipped/as-built behavior in the relevant file under `docs/systems/`.
+- Keep remaining backlog entries itemized and actionable so future agents can execute them directly.
 
 ## Common Task Entry Points
 

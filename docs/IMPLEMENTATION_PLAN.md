@@ -1,7 +1,12 @@
-# TD + Match-3 + RPG — Implementation Plan (Lean Status)
+# TD + Match-3 + RPG — Pending Backlog Only
 
-This file is intentionally concise. It is the **execution/status index** for agents.
-Detailed behavior lives in system docs:
+> **Agent policy (planning + execution):**
+> - Keep this file as a **pending-features-only** backlog.
+> - When a feature is implemented, **remove it from this file in the same change**.
+> - Move shipped behavior details to the appropriate system doc (`docs/systems/*`) instead of keeping completion history here.
+
+This document lists **only unimplemented features**.  
+If a feature ships, remove it from this file and document as-built behavior in:
 
 - [docs/systems/tower_defense.md](systems/tower_defense.md)
 - [docs/systems/match3.md](systems/match3.md)
@@ -9,176 +14,81 @@ Detailed behavior lives in system docs:
 
 ---
 
-## 1) What is already implemented
+## Tower Defense
 
-### Milestone status
+- [ ] **TD-001 — 2x/3x battle speed controls**
+  - Add player-selectable 2x and 3x speed options for TD battle runtime.
+  - Scope: TD battle simulation pacing only (not Castle or Mine scenes).
 
-| Milestone | Status | Notes |
-|---|---|---|
-| 1. Foundations (`EventBus`, `GameState`, `SaveManager`) | ✅ Done | Save/state/event backbone is in use. |
-| 2. TD core loop vertical slice | ✅ Done | Move/attack loop, spawning, win/loss flow present. |
-| 3. Data-driven adventurers/enemies + towers | ✅ Done | `.tres` driven content and combat roles wired. |
-| 4. Castle minimal (Tavern + Quarters -> TD roster) | ✅ Done | Recruitment + active roster selection works. |
-| 5. Match-3 mine loop | ✅ Done | Matching, cascades, descend, rewards integrated. |
-| 6. Remaining Castle buildings | ✅ Done | Smelter, smiths, armoury, upgrade rows implemented. |
-| 7. Day/wave progression | ✅ Done | Days 1–3 exist; day discovery is data-driven. |
-| 8. Polish (broad umbrella) | 🟡 In progress | Ongoing; see open workstreams below. |
-| 9. Match-3 move-to-empty animation clarity | ✅ Done | Dedicated move event + queue ordering added. |
-| 10. Top resource bar HUD 2.0 | ✅ Done | `TopResourceBar` replaces compact HUD in Castle/TD/Mine. |
-| 11. Castle focus mode + War Room | ✅ Done | Building focus mode and day selection migration complete. |
-| 12. Visual/UX continuity after HUD/focus changes | ✅ Done | Layout continuity and docs updates applied. |
+- [ ] **TD-002 — Hardcoded per-day paths (Day 1-5)**
+  - Give each day (1 through 5) a distinct hardcoded enemy route.
+  - Goal: each day changes optimal placement strategy.
 
-### Recent completions (important for future agents)
+- [ ] **TD-003 — Additional status interactions beyond current set**
+  - Extend combat interaction depth with new status mechanics beyond currently shipped effects.
+  - Keep combat readability clear in HUD/feedback.
 
-1. Mine empty-space moves now animate explicitly before gravity.
-2. Shared full-width `TopResourceBar` is the active HUD pattern.
-3. Castle uses focus-mode panel entry and a dedicated War Room for day start flow.
-4. Documentation in `docs/systems/` was updated to match current behavior.
+- [ ] **TD-004 — Expand unit/enemy/spell content**
+  - Add more adventurers, enemies, and spells using data-first resources under `data/`.
 
----
+- [ ] **TD-005 — Add Day 6+ wave content**
+  - Add new `day_<n>.tres` wave sets beyond Day 5.
 
-## 2) Open workstreams (next priorities)
+- [ ] **TD-006 — Rebalance day pacing/rewards**
+  - Re-tune day pacing and reward curves for better moment-to-moment flow.
 
-These replace older “immediate steps” that are now complete.
+## Match-3 + Economy Loop
 
-### A. Gameplay balancing (highest ROI)
-- Rebalance Day 1–3 pacing/reward curves.
-- Tune mine material income against crafting/upgrade costs.
-- Validate “battle -> mine -> castle spend” loop feels consistently rewarding.
+- [ ] **LOOP-001 — Mine income vs upgrade-cost tuning**
+  - Rebalance mine material income against crafting and upgrade costs.
 
-### B. Content expansion (data-first)
-- Add more adventurers/enemies/spells under `data/`.
-- Add Day 4+ wave data (`data/waves/day_<n>.tres`).
-- Keep script changes minimal unless new mechanics require them.
+- [ ] **LOOP-002 — End-to-end loop feel pass**
+  - Validate and tune `battle -> mine -> castle spend` cadence to feel consistently rewarding.
 
-### C. Castle progression depth
-- Improve upgrade differentiation (not just cost gates).
-- Clarify long-term progression choices across buildings.
-- Improve in-panel “what unlocks next” readability.
+## Castle Progression
 
-### D. TD tactical depth
-- Add limited new status interactions (for example: slow, armour break, anti-swarm).
-- Ensure effects are readable in combat feedback and primarily data-driven.
+- [ ] **CASTLE-001 — Stronger upgrade identity**
+  - Improve upgrade differentiation so choices are strategic, not only cost-gated.
 
-### E. UX readability and feedback
-- Refine top bar context emphasis/order.
-- Improve high-signal UI feedback (descend available, wave transitions, day result).
-- Re-check overlay/input blocking risks at 1280x720.
+- [ ] **CASTLE-002 — Long-term progression clarity**
+  - Clarify how building choices impact longer-run progression.
 
-### F. Audio + VFX pass
-- Add missing SFX hooks (combat, mine events, day outcomes).
-- Add lightweight VFX for key events, consistent with pixel-fantasy tone.
+- [ ] **CASTLE-003 — Better unlock readability in panels**
+  - Improve in-panel communication of what unlocks next.
 
-### G. Robustness workflow
-- Keep mandatory parse gate:
-  - `godot --headless --path "D:\td-m3-game" --check-only --quit`
-- Keep compact smoke checks for Castle/TD/Mine after behavior changes.
+- [ ] **CASTLE-004 — Library building scaffold**
+  - Add Library building data and Castle panel routing.
+  - Add placeholder Library panel with empty-state messaging.
 
-### H/I. Completed milestone archive (condensed)
+- [ ] **CASTLE-005 — Bestiary encounter tracking**
+  - Track enemy encountered events from TD.
+  - Persist encountered enemy IDs in save-compatible state.
 
-- ✅ **H. Guided progression loop** delivered:
-  - Day 1 -> Mine onboarding lock flow,
-  - reusable gate state model (`introduced/active/resolved`),
-  - Workshop + Dynamite/Shovel/Barrier Trinket loops,
-  - gate-aware Mine blockers and Castle/Mine objective surfacing.
-- ✅ **I. TD combat UI readability** delivered:
-  - compact HP/action bars (no enemy numeric HP fallback),
-  - per-adventurer action storage cap model,
-  - hover/tap unit info cards with range previews.
-- ✅ Validation for these deliveries used the mandatory parse gate:
-  - `godot --headless --path "D:\td-m3-game" --check-only --quit`
-- See as-built behavior in:
-  - [docs/systems/castle.md](systems/castle.md)
-  - [docs/systems/match3.md](systems/match3.md)
-  - [docs/systems/tower_defense.md](systems/tower_defense.md)
+- [ ] **CASTLE-006 — Bestiary data binding + state model**
+  - Build bestiary entry states: Unknown, Discovered, Detailed.
+  - Source metadata from existing enemy resources where possible.
 
-### J. Castle Library + Bestiary roadmap (new priority)
+- [ ] **CASTLE-007 — Bestiary list + detail UI**
+  - Implement scan-friendly list with locked/discovered states.
+  - Implement detail view with stats and attack profile.
 
-Goal: add a new Castle building (**Library**) that acts as the player’s bestiary, tracking encountered enemies and exposing clear stat/attack information.
+- [ ] **CASTLE-008 — Bestiary progression integration + polish**
+  - Wire Library unlock timing/requirements into progression.
+  - Add subtle "new entry discovered" post-battle feedback.
 
-#### J1. Building role and progression fit
-- Library is a Castle-side knowledge/progression building, not a combat power spike by itself.
-- Primary function: convert enemy encounters into persistent knowledge entries.
-- Unlock timing should align with early-mid progression so the feature is useful before enemy roster grows too large.
+## UX / Presentation
 
-#### J2. Bestiary discovery rules
-- Enemy entries unlock when that enemy has been fought (encountered in TD), not only when killed.
-- Entry state model:
-  1. **Unknown** (not encountered),
-  2. **Discovered** (basic info visible),
-  3. **Detailed** (full stats/attack profile visible; optional future upgrades can expand detail depth).
-- Discovery state persists in save data.
+- [ ] **UX-001 — Top resource bar context refinement**
+  - Refine emphasis/order for higher-signal context display.
 
-#### J3. Entry content scope
-- Per enemy bestiary entry should include:
-  - Name, portrait/sprite reference, and category tags.
-  - Core combat stats (HP, movement speed, resistances/armour if applicable).
-  - Attack profile (attack type, interval/rate, damage style, notable special effects).
-  - Drop hints/known rewards where applicable (consistent with progression gating design).
-- Keep terminology identical to TD combat UI labels to avoid confusion.
+- [ ] **UX-002 — High-signal feedback pass**
+  - Improve feedback for descend availability, wave transitions, and day results.
 
-#### J4. Library UX expectations
-- Library appears as a selectable Castle building/panel.
-- Bestiary list supports quick scan:
-  - Locked/unknown entries are visually distinct.
-  - Discovered entries show summary row + expandable/openable details.
-- Entry details should be readable at 1280x720 and remain controller/mobile-friendly.
+- [ ] **UX-003 — 1280x720 overlay/input safety pass**
+  - Re-check and fix any HUD overlay/input-blocking risks at target resolution.
 
-#### J5. Delivery slices (small, implementable packets)
+- [ ] **AV-001 — Missing SFX hooks**
+  - Add missing SFX triggers for combat, mine events, and day outcomes.
 
-Packet 1 — Building scaffold
-- Add Library building data and Castle panel routing.
-- Add placeholder panel with empty-state messaging.
-
-Packet 2 — Encounter tracking backend
-- Track “enemy encountered” events from TD flow.
-- Persist encountered enemy IDs in save-compatible progression state.
-
-Packet 3 — Bestiary data binding
-- Define bestiary-facing enemy metadata (data-first, sourced from enemy resources where possible).
-- Build entry state resolution (unknown/discovered/detailed).
-
-Packet 4 — List + detail UI
-- Implement bestiary list view with locked/discovered states.
-- Implement detail card/page with stats + attacks breakdown.
-
-Packet 5 — Progression integration + polish
-- Wire unlock timing/requirements for Library access.
-- Add subtle “new entry discovered” feedback after battles.
-- Tune readability and navigation flow.
-
-#### J6. Data-first and architecture notes
-- Prefer storing bestiary presentation data in `data/` resources or in enemy resource fields (avoid duplicate hardcoded tables).
-- Reuse existing enemy stat sources; bestiary should reflect authoritative combat data.
-- Keep encounter tracking event-driven via existing battle/event systems.
-- Preserve save compatibility using additive fields/default empty collections for discovered entries.
-
-#### J7. Validation per packet
-- Mandatory:
-  - `godot --headless --path "D:\td-m3-game" --check-only --quit`
-- Smoke checks:
-  - Entering Library from Castle panel is stable and input-safe.
-  - First encounter with an enemy creates/updates the corresponding bestiary state.
-  - Save/load retains discovered entries and detail level correctly.
-  - Bestiary stats/attack info match live enemy behavior in TD.
-  - Unknown/discovered/detailed visuals are clearly distinguishable.
-
----
-
-## 3) Agent execution guidance
-
-When implementing new work:
-
-1. Read this file + relevant system doc(s) first.
-2. Prefer **data-first** changes in `data/*.tres` where possible.
-3. Keep edits tightly scoped to one system per packet unless coupling demands otherwise.
-4. Update the matching system doc whenever behavior changes.
-5. Always run the headless check and report exact validation performed.
-
----
-
-## 4) Outdated sections removed on purpose
-
-Prior versions of this file included full architecture/folder/data-model detail and completed milestone
-checklists that duplicated current as-built docs. Those sections were intentionally removed to reduce
-reading overhead and make implemented vs. pending work obvious for future agents.
+- [ ] **AV-002 — Lightweight gameplay VFX**
+  - Add key-event VFX aligned with the pixel-fantasy tone.
