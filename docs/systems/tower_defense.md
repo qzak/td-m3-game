@@ -24,12 +24,13 @@ alongside code changes so it stays a reliable reference. See
 ## Grid & Path
 
 - 24x16 grid, 32px cells, `TDGridMap` positioned at `(80, 80)` in the scene.
-- The castle doors always sit at the top-middle cell (`Vector2i(grid_width / 2, 0)`). The enemy
-  path is a gentle, single-tile-wide zigzag from a bottom/side entry point up to those doors —
-  built in `TDGridMap._build_path()` as a handful of axis-aligned waypoints (currently: bottom-right
-  corner → up → left → up → left → up to the door), walked segment by segment into the ordered
-  `path_cells` array. `path_cell_set` is kept alongside for O(1) membership checks (drawing,
-  buildability). The castle-door cell is drawn with a distinct dark/gold marker.
+- The castle doors always sit at the top-middle cell (`Vector2i(grid_width / 2, 0)`).
+- Enemy routes are now day-specific: `DayData.path_waypoints` (stored in `data/waves/day_1.tres`
+  through `day_5.tres`) defines each day's hardcoded, axis-aligned waypoint chain. `TDGridMap`
+  expands those waypoints into ordered `path_cells`; `path_cell_set` is kept alongside for O(1)
+  membership checks (drawing/buildability). Missing or invalid waypoint data falls back to the
+  legacy default route.
+- The castle-door cell is drawn with a distinct dark/gold marker.
 - All non-path cells are buildable; `occupied_cells` (keyed by `Vector2i`) tracks which ones
   already have an adventurer.
 - **Important gotcha:** the `HUD` `Control` covers the whole viewport, so its `mouse_filter`
@@ -63,6 +64,9 @@ Win condition: no enemies left alive and no wave left to call. Loss condition: c
 hits 0. Both stop the timer and set `battle_over`.
 
 The timer isn't running continuously for the whole Day, though — see below.
+
+Players can change simulation pacing with HUD speed controls (`1x`, `2x`, `3x`). This only changes
+the TD battle step timer cadence (`StepTimer.wait_time`) and does not affect Castle or Mine scenes.
 
 ## Enemy Movement & Blocking
 
@@ -99,7 +103,7 @@ The timer isn't running continuously for the whole Day, though — see below.
 ## Day / Wave Structure
 
 - `TDBattleController.day_data` (a `DayData` resource) replaces the old hardcoded single-wave
-  fields. `DayData` holds `day_index`, an ordered `waves: Array[WaveData]`, and a
+  fields. `DayData` holds `day_index`, an ordered `waves: Array[WaveData]`, `path_waypoints`, and a
   `difficulty_scalar` applied as an enemy health multiplier (`TDEnemy.setup(data, grid,
   health_multiplier)`).
 - Each `WaveData` is just `enemy_data: EnemyData` + `count` + `spawn_delay_steps` — no id/string

@@ -4,5 +4,6 @@ class_name DayData
 
 @export var day_index: int = 0
 @export var waves: Array[WaveData] = []
+@export var path_waypoints: Array[Vector2i] = []
 @export var difficulty_scalar: float = 1.0
 @export var completion_reward: int = 100  ## gold awarded once all waves are cleared

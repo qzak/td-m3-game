@@ -5,12 +5,21 @@ class_name TDGridMap
 @export var grid_width: int = 24
 @export var grid_height: int = 16
 @export var cell_size: int = 32
+@export var default_path_waypoints: Array[Vector2i] = [
+	Vector2i(23, 15),
+	Vector2i(23, 9),
+	Vector2i(16, 9),
+	Vector2i(16, 4),
+	Vector2i(12, 4),
+	Vector2i(12, 0),
+]
 
 var path_cells: Array[Vector2i] = []
 var path_cell_set: Dictionary = {}  # Vector2i -> true, fast membership check
 var buildable_cells: Dictionary = {}  # Vector2i -> true
 var occupied_cells: Dictionary = {}  # Vector2i -> TDAdventurer
 var reserved_cells: Dictionary = {}  # Vector2i -> true, fixed Tower cells; never player-buildable
+var active_path_waypoints: Array[Vector2i] = []
 
 var preview_active: bool = false
 var preview_center: Vector2i = Vector2i.ZERO
@@ -24,18 +33,13 @@ func _ready() -> void:
 	_build_path()
 	queue_redraw()
 
-## Castle doors always sit at the top-middle; the path is a gentle, axis-aligned
-## zigzag from a bottom/side entry point up to that door, rather than a full snake.
+func set_path_waypoints(waypoints: Array[Vector2i]) -> void:
+	active_path_waypoints = waypoints.duplicate()
+	_build_path()
+	queue_redraw()
+
 func _build_path() -> void:
-	var castle_cell := Vector2i(grid_width / 2, 0)
-	var waypoints: Array[Vector2i] = [
-		Vector2i(grid_width - 1, grid_height - 1),
-		Vector2i(grid_width - 1, int(grid_height * 0.6)),
-		Vector2i(int(grid_width * 0.67), int(grid_height * 0.6)),
-		Vector2i(int(grid_width * 0.67), int(grid_height * 0.25)),
-		Vector2i(castle_cell.x, int(grid_height * 0.25)),
-		castle_cell,
-	]
+	var waypoints: Array[Vector2i] = _resolve_path_waypoints()
 
 	path_cells.clear()
 	path_cells.append(waypoints[0])
@@ -58,6 +62,47 @@ func _build_path() -> void:
 			var cell := Vector2i(x, y)
 			if not path_cell_set.has(cell):
 				buildable_cells[cell] = true
+
+func _resolve_path_waypoints() -> Array[Vector2i]:
+	var legacy_waypoints := _legacy_default_waypoints()
+	if _is_valid_waypoint_path(default_path_waypoints):
+		legacy_waypoints = default_path_waypoints.duplicate()
+	if _is_valid_waypoint_path(active_path_waypoints):
+		return active_path_waypoints.duplicate()
+	return legacy_waypoints
+
+func _is_valid_waypoint_path(waypoints: Array[Vector2i]) -> bool:
+	if waypoints.size() < 2:
+		return false
+
+	var castle_cell := Vector2i(grid_width / 2, 0)
+	if waypoints[waypoints.size() - 1] != castle_cell:
+		return false
+
+	for i in range(waypoints.size()):
+		if not is_in_bounds(waypoints[i]):
+			return false
+		if i == 0:
+			continue
+		var prev: Vector2i = waypoints[i - 1]
+		var current: Vector2i = waypoints[i]
+		if prev == current:
+			return false
+		if prev.x != current.x and prev.y != current.y:
+			return false
+
+	return true
+
+func _legacy_default_waypoints() -> Array[Vector2i]:
+	var castle_cell := Vector2i(grid_width / 2, 0)
+	return [
+		Vector2i(grid_width - 1, grid_height - 1),
+		Vector2i(grid_width - 1, int(grid_height * 0.6)),
+		Vector2i(int(grid_width * 0.67), int(grid_height * 0.6)),
+		Vector2i(int(grid_width * 0.67), int(grid_height * 0.25)),
+		Vector2i(castle_cell.x, int(grid_height * 0.25)),
+		castle_cell,
+	]
 
 func cell_to_world(cell: Vector2i) -> Vector2:
 	return Vector2(cell.x * cell_size + cell_size / 2.0, cell.y * cell_size + cell_size / 2.0)

@@ -14,5 +14,6 @@
 script = ExtResource("1")
 day_index = 4
 waves = Array[ExtResource("2")]([ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8"), ExtResource("9")])
+path_waypoints = Array[Vector2i]([Vector2i(12, 15), Vector2i(3, 15), Vector2i(3, 8), Vector2i(10, 8), Vector2i(10, 3), Vector2i(12, 3), Vector2i(12, 0)])
 difficulty_scalar = 1.9
 completion_reward = 280

@@ -16,14 +16,6 @@ If a feature ships, remove it from this file and document as-built behavior in:
 
 ## Tower Defense
 
-- [ ] **TD-001 — 2x/3x battle speed controls**
-  - Add player-selectable 2x and 3x speed options for TD battle runtime.
-  - Scope: TD battle simulation pacing only (not Castle or Mine scenes).
-
-- [ ] **TD-002 — Hardcoded per-day paths (Day 1-5)**
-  - Give each day (1 through 5) a distinct hardcoded enemy route.
-  - Goal: each day changes optimal placement strategy.
-
 - [ ] **TD-003 — Additional status interactions beyond current set**
   - Extend combat interaction depth with new status mechanics beyond currently shipped effects.
   - Keep combat readability clear in HUD/feedback.

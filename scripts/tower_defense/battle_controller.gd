@@ -24,6 +24,9 @@ const UNIT_INFO_CARD_SCRIPT := preload("res://scripts/ui/unit_info_card.gd")
 @onready var selected_label: Label = $UI/HUD/SelectedLabel
 @onready var start_button: Button = $UI/HUD/Controls/StartBattleButton
 @onready var auto_call_button: Button = $UI/HUD/Controls/AutoCallButton
+@onready var speed_1x_button: Button = $UI/HUD/Controls/Speed1xButton
+@onready var speed_2x_button: Button = $UI/HUD/Controls/Speed2xButton
+@onready var speed_3x_button: Button = $UI/HUD/Controls/Speed3xButton
 @onready var return_button: Button = $UI/HUD/Controls/ReturnToCastleButton
 @onready var placement_buttons_container: Container = $UI/HUD/Controls/PlacementButtonsContainer
 @onready var top_resource_bar: Control = $UI/HUD/TopResourceBar
@@ -42,6 +45,7 @@ var castle_hp: int = 0
 var is_move_phase: bool = true
 var battle_started: bool = false
 var battle_over: bool = false
+var battle_speed_multiplier: int = 1
 
 var selected_adventurer_data: AdventurerData = null
 var placed_adventurer_ids: Dictionary = {}  # AdventurerData.id -> true, one copy of each allowed
@@ -69,6 +73,7 @@ func _ready() -> void:
 		var loaded_day: DayData = load("res://data/waves/day_%d.tres" % GameState.selected_day_index)
 		if loaded_day != null:
 			day_data = loaded_day
+	grid.set_path_waypoints(day_data.path_waypoints)
 
 	for wave in day_data.waves:
 		total_enemies_remaining_to_spawn += wave.count
@@ -77,11 +82,15 @@ func _ready() -> void:
 
 	grid.cell_clicked.connect(_on_grid_cell_clicked)
 	grid.cell_hovered.connect(_on_grid_cell_hovered)
-	step_timer.wait_time = step_interval
 	step_timer.timeout.connect(_on_step_timer_timeout)
+	_apply_step_timer_speed()
 
 	start_button.pressed.connect(_on_start_button_pressed)
 	auto_call_button.pressed.connect(_on_auto_call_button_pressed)
+	speed_1x_button.pressed.connect(_on_speed_button_pressed.bind(1))
+	speed_2x_button.pressed.connect(_on_speed_button_pressed.bind(2))
+	speed_3x_button.pressed.connect(_on_speed_button_pressed.bind(3))
+	_update_speed_controls()
 	return_button.visible = false
 	return_button.pressed.connect(_on_return_button_pressed)
 
@@ -183,6 +192,25 @@ func _on_auto_call_button_pressed() -> void:
 	auto_call_next = not auto_call_next
 	_update_wave_controls()
 	_update_hud()
+
+func _on_speed_button_pressed(multiplier: int) -> void:
+	if multiplier < 1 or multiplier > 3:
+		return
+	if battle_speed_multiplier == multiplier:
+		return
+	battle_speed_multiplier = multiplier
+	_apply_step_timer_speed()
+	_update_speed_controls()
+
+func _apply_step_timer_speed() -> void:
+	# Only update the interval; never restart an in-flight tick to avoid micro-bursts
+	# from partial-progress retiming when players toggle speed repeatedly.
+	step_timer.wait_time = step_interval / float(battle_speed_multiplier)
+
+func _update_speed_controls() -> void:
+	speed_1x_button.disabled = battle_speed_multiplier == 1
+	speed_2x_button.disabled = battle_speed_multiplier == 2
+	speed_3x_button.disabled = battle_speed_multiplier == 3
 
 func _begin_wave() -> void:
 	if not battle_started:
