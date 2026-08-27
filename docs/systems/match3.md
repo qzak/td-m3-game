@@ -11,7 +11,7 @@ button and returns through `Return to Castle`.
 | `scripts/match3/match_solver.gd` (`MineMatchSolver`) | Finds horizontal and vertical runs of three or more, including boards with empty cells. |
 | `scripts/match3/mine_controller.gd` (`MineController`) | Draws the board, handles click-to-swap input, applies rewards to `GameState`, and updates the HUD. |
 | `scenes/ui/top_resource_bar.tscn` / `scripts/ui/top_resource_bar.gd` (`TopResourceBar`) | Shared full-width resource strip with placeholder icon swatches, context filtering, and live `EventBus` updates. |
-| `data/tiles/*.tres` | Data-driven dirt, stone, clay, copper, iron, and gold tile definitions. |
+| `data/tiles/*.tres` | Data-driven tile definitions, including progression blockers (`hard_stone`, `rooted_stone`). |
 | `autoload/save_manager.gd` | Persists `mine_depth` and the serialized current board in `user://savegame.json`. |
 
 ## Rules
@@ -31,6 +31,11 @@ button and returns through `Return to Castle`.
   adds its material directly through `GameState.add_material()` and emits
   `EventBus.mine_match_resolved`.
 - Garbage tiles are dirt, stone, and clay. They have no material reward and primarily clear space.
+- Gate-aware blocker rules:
+  - **Hardness Gate A** (`hard_stone`): survives normal match clears while gate is active; must be removed with Dynamite.
+  - **Hardness Gate B** (`rooted_stone`): cannot be moved by normal swap/move rules until Shovel is crafted.
+  - **Magic Barrier Gate**: matching/moving below the barrier row is blocked until the trinket is attuned.
+- Descend is additionally progression-gated by active unresolved mine gates via `GameState.gate_state(...)`.
 
 ## Animation & Input Locking
 
@@ -53,3 +58,7 @@ button and returns through `Return to Castle`.
   full-width `TopResourceBar` at the top of the scene.
 - Idle/help status copy now repeatedly calls out the goal ("clear the top edge") to make descent
   requirements obvious without trial-and-error.
+- Mine HUD now also includes:
+  - a gate/objective line (shared Castle objective source),
+  - a Dynamite action button with targeting mode,
+  - explicit blocked-reason status messaging from progression state.

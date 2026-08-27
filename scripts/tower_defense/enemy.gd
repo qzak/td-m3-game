@@ -12,6 +12,7 @@ var data: EnemyData
 var grid: TDGridMap
 var path_index: int = 0
 var current_health: int
+var max_health: int = 1
 var current_cell: Vector2i
 var move_cooldown: int = 0  # >0 means this enemy is resting and won't attempt to move yet
 var slow_steps_remaining: int = 0
@@ -21,13 +22,14 @@ var armour_break_amount: int = 0
 var dying: bool = false
 
 @onready var body: Polygon2D = $Body
-@onready var hp_label: Label = $HPLabel
+@onready var hp_bar: WorldStatBar = $HPBar
 @onready var status_label: Label = $StatusLabel
 
 func setup(p_data: EnemyData, p_grid: TDGridMap, health_multiplier: float = 1.0) -> void:
 	data = p_data
 	grid = p_grid
-	current_health = int(round(data.health * health_multiplier))
+	max_health = maxi(int(round(data.health * health_multiplier)), 1)
+	current_health = max_health
 	path_index = 0
 	move_cooldown = 0
 	slow_steps_remaining = 0
@@ -36,7 +38,7 @@ func setup(p_data: EnemyData, p_grid: TDGridMap, health_multiplier: float = 1.0)
 	armour_break_amount = 0
 	current_cell = grid.path_cells[0]
 	position = grid.cell_to_world(current_cell)
-	_update_hp_label()
+	_update_hp_bar()
 	_update_status_label()
 
 ## Where this enemy would move to this step if nothing blocks it (no state change yet).
@@ -84,8 +86,8 @@ func try_stun(adventurers: Array[TDAdventurer]) -> void:
 ## Returns true if this attack killed the enemy.
 func take_damage(amount: int) -> bool:
 	var mitigated := maxi(amount - _effective_armour(), 0)
-	current_health -= mitigated
-	_update_hp_label()
+	current_health = maxi(current_health - mitigated, 0)
+	_update_hp_bar()
 	return current_health <= 0
 
 func apply_slow(duration_steps: int, move_period_bonus: int) -> void:
@@ -135,8 +137,8 @@ func play_death_animation() -> void:
 	if dying:
 		return
 	dying = true
-	if hp_label:
-		hp_label.visible = false
+	if hp_bar:
+		hp_bar.visible = false
 	if status_label:
 		status_label.visible = false
 	var tween := create_tween()
@@ -146,9 +148,9 @@ func play_death_animation() -> void:
 	tween.tween_property(self, "rotation_degrees", 85.0, 0.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	tween.finished.connect(queue_free)
 
-func _update_hp_label() -> void:
-	if hp_label:
-		hp_label.text = str(current_health)
+func _update_hp_bar() -> void:
+	if hp_bar:
+		hp_bar.set_ratio(float(current_health) / float(maxi(max_health, 1)))
 
 func _update_status_label() -> void:
 	if status_label == null:

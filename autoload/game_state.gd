@@ -21,6 +21,7 @@ var building_levels: Dictionary = {
 	"armoury": 1,
 	"quarters": 1,
 	"towers": 1,
+	"workshop": 1,
 }
 
 var tavern_roster_ids: Array = []
@@ -36,7 +37,44 @@ var selected_day_index: int = 1
 var last_day_result: Dictionary = {}
 var mine_depth: int = 0
 var mine_board_state: Array = []
+var progression: Dictionary = {
+	"day1_cleared": false,
+	"mine_intro_seen": false,
+	"first_depth_cleared": false,
+	"workshop_unlocked": false,
+	"barrier_trinket_obtained": false,
+	"barrier_trinket_activated": false,
+}
+var gate_states: Dictionary = {
+	"hardness_a": "introduced",
+	"hardness_b": "introduced",
+	"magic_barrier": "introduced",
+}
+var dynamite_count: int = 0
+var shovel_unlocked: bool = false
 var _total_known_days_cache: int = -1  # -1 = not yet computed
+
+const GATE_INTRODUCED := "introduced"
+const GATE_ACTIVE := "active"
+const GATE_RESOLVED := "resolved"
+const WORKSHOP_RECIPES := {
+	"dynamite": {
+		"display_name": "Dynamite",
+		"materials": {"volatile_core": 1, "copper": 3},
+		"requires_gate": "hardness_a",
+	},
+	"shovel": {
+		"display_name": "Forge Shovel",
+		"materials": {"iron": 4, "refined_iron": 2},
+		"requires_gate": "hardness_b",
+	},
+	"activate_trinket": {
+		"display_name": "Attune Wardbreaker Trinket",
+		"materials": {"refined_gold": 2},
+		"requires_gate": "magic_barrier",
+		"requires_trinket": true,
+	},
+}
 
 func _ready() -> void:
 	EventBus.day_started.connect(func(_idx): tavern_reroll_count = 0)
@@ -44,6 +82,9 @@ func _ready() -> void:
 
 func _on_day_won(day_index: int) -> void:
 	unlocked_day_index = maxi(unlocked_day_index, day_index + 1)
+	if day_index == 1 and not progression.get("day1_cleared", false):
+		progression["day1_cleared"] = true
+		_emit_progression_changed("day1-cleared")
 
 func record_day_result(day_index: int, did_win: bool, currency_delta: int, completion_reward: int, castle_hp_end: int, unlocked_day_after: int) -> void:
 	last_day_result = {
@@ -56,6 +97,126 @@ func record_day_result(day_index: int, did_win: bool, currency_delta: int, compl
 		"unlocked_day_after": unlocked_day_after,
 		"timestamp_unix": int(Time.get_unix_time_from_system()),
 	}
+
+func can_enter_mine() -> bool:
+	return bool(progression.get("day1_cleared", false))
+
+func can_start_day(day_index: int) -> bool:
+	if day_index > unlocked_day_index:
+		return false
+	if day_index <= 1:
+		return true
+	return bool(progression.get("first_depth_cleared", false))
+
+func mark_mine_intro_seen() -> void:
+	if progression.get("mine_intro_seen", false):
+		return
+	progression["mine_intro_seen"] = true
+	_emit_progression_changed("mine-intro-seen")
+
+func mark_first_depth_cleared() -> void:
+	if progression.get("first_depth_cleared", false):
+		return
+	progression["first_depth_cleared"] = true
+	progression["workshop_unlocked"] = true
+	if gate_state("hardness_a") != GATE_RESOLVED:
+		set_gate_state("hardness_a", GATE_ACTIVE)
+	_emit_progression_changed("first-depth-cleared")
+
+func gate_state(gate_id: String) -> String:
+	return str(gate_states.get(gate_id, GATE_INTRODUCED))
+
+func set_gate_state(gate_id: String, new_state: String) -> void:
+	if not gate_states.has(gate_id):
+		return
+	if new_state != GATE_INTRODUCED and new_state != GATE_ACTIVE and new_state != GATE_RESOLVED:
+		return
+	if gate_states[gate_id] == new_state:
+		return
+	gate_states[gate_id] = new_state
+	if gate_id == "hardness_a" and new_state == GATE_RESOLVED and gate_state("hardness_b") != GATE_RESOLVED:
+		gate_states["hardness_b"] = GATE_ACTIVE
+	if gate_id == "hardness_b" and new_state == GATE_RESOLVED and gate_state("magic_barrier") != GATE_RESOLVED:
+		gate_states["magic_barrier"] = GATE_ACTIVE
+	_emit_progression_changed("gate-state-%s-%s" % [gate_id, new_state])
+
+func consume_dynamite() -> bool:
+	if dynamite_count <= 0:
+		return false
+	dynamite_count -= 1
+	if gate_state("hardness_a") == GATE_ACTIVE:
+		set_gate_state("hardness_a", GATE_RESOLVED)
+	_emit_progression_changed("dynamite-used")
+	return true
+
+func craft_workshop_recipe(recipe_id: String) -> bool:
+	var recipe: Dictionary = WORKSHOP_RECIPES.get(recipe_id, {})
+	if recipe.is_empty():
+		return false
+	if not progression.get("workshop_unlocked", false):
+		return false
+	var required_gate := str(recipe.get("requires_gate", ""))
+	if not required_gate.is_empty() and gate_state(required_gate) != GATE_ACTIVE:
+		return false
+	if bool(recipe.get("requires_trinket", false)) and not progression.get("barrier_trinket_obtained", false):
+		return false
+	var material_costs: Dictionary = recipe.get("materials", {})
+	for material_id in material_costs:
+		if materials.get(material_id, 0) < int(material_costs[material_id]):
+			return false
+	for material_id in material_costs:
+		spend_material(material_id, int(material_costs[material_id]))
+	match recipe_id:
+		"dynamite":
+			dynamite_count += 1
+		"shovel":
+			shovel_unlocked = true
+			set_gate_state("hardness_b", GATE_RESOLVED)
+		"activate_trinket":
+			progression["barrier_trinket_activated"] = true
+			set_gate_state("magic_barrier", GATE_RESOLVED)
+		_:
+			return false
+	_emit_progression_changed("crafted-%s" % recipe_id)
+	return true
+
+func grant_barrier_trinket() -> void:
+	if progression.get("barrier_trinket_obtained", false):
+		return
+	progression["barrier_trinket_obtained"] = true
+	_emit_progression_changed("trinket-obtained")
+
+func castle_objective_text() -> String:
+	if not progression.get("day1_cleared", false):
+		return "Objective: Win Day 1 in the War Room."
+	if not progression.get("first_depth_cleared", false):
+		return "Objective: Enter the Mine and clear the first depth layer."
+	if gate_state("hardness_a") == GATE_ACTIVE:
+		if dynamite_count > 0:
+			return "Objective: Use Dynamite in the Mine to blast hardened stone."
+		return "Objective: Defeat Large Goblins for Volatile Core, then craft Dynamite in Workshop."
+	if gate_state("hardness_b") == GATE_ACTIVE:
+		if shovel_unlocked:
+			return "Objective: Return to the Mine and clear immovable strata with your Shovel."
+		return "Objective: Craft a Shovel in Workshop to clear immovable mine pieces."
+	if gate_state("magic_barrier") == GATE_ACTIVE:
+		if not progression.get("barrier_trinket_obtained", false):
+			return "Objective: Defeat the Day 3 Goblin Warlord boss for the Wardbreaker Trinket."
+		if not progression.get("barrier_trinket_activated", false):
+			return "Objective: Attune the Wardbreaker Trinket in Workshop to dispel the barrier."
+	return "Objective: Push deeper into the mine and strengthen your roster."
+
+func mine_blocked_reason() -> String:
+	if gate_state("hardness_a") == GATE_ACTIVE and dynamite_count <= 0:
+		return "Hardened stone blocks progress. Craft Dynamite in Workshop."
+	if gate_state("hardness_b") == GATE_ACTIVE and not shovel_unlocked:
+		return "Immovable strata blocks progress. Craft a Shovel in Workshop."
+	if gate_state("magic_barrier") == GATE_ACTIVE and not progression.get("barrier_trinket_activated", false):
+		return "A magic barrier seals deeper strata. Obtain and attune the Wardbreaker Trinket."
+	return ""
+
+func _emit_progression_changed(reason: String) -> void:
+	EventBus.progression_changed.emit(reason)
 
 func total_known_days() -> int:
 	# Return cached value if already computed

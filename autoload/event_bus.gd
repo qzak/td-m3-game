@@ -20,3 +20,4 @@ signal castle_hp_changed(new_hp: int)
 
 signal mine_depth_changed(new_depth: int)
 signal mine_match_resolved(material_id: String, amount: int)
+signal progression_changed(reason: String)

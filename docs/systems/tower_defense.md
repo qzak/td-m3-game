@@ -14,7 +14,8 @@ alongside code changes so it stays a reliable reference. See
 | [scripts/tower_defense/adventurer.gd](../../scripts/tower_defense/adventurer.gd) (`TDAdventurer`) | Per-placed-unit state: attack pool charge/regen, range check. |
 | [scripts/tower_defense/enemy.gd](../../scripts/tower_defense/enemy.gd) (`TDEnemy`) | Per-enemy state: health/armour, path following, move-speed cooldown. |
 | [data/tower_defense/status_effect_profile.gd](../../data/tower_defense/status_effect_profile.gd) + [data/tower_defense/status_profiles/*.tres](../../data/tower_defense/status_profiles/) | Data-driven on-hit status effect profile used by adventurers/spells (slow, armour break, anti-swarm). |
-| [scenes/tower_defense/adventurer_unit.tscn](../../scenes/tower_defense/adventurer_unit.tscn) / [enemy_unit.tscn](../../scenes/tower_defense/enemy_unit.tscn) | Placeholder visuals (colored square + stat label) — no art yet. |
+| [scenes/tower_defense/adventurer_unit.tscn](../../scenes/tower_defense/adventurer_unit.tscn) / [enemy_unit.tscn](../../scenes/tower_defense/enemy_unit.tscn) | Placeholder visuals (colored square + compact combat bars + status label) — no final art yet. |
+| [scripts/ui/world_stat_bar.gd](../../scripts/ui/world_stat_bar.gd) + [scripts/ui/adventurer_action_meter.gd](../../scripts/ui/adventurer_action_meter.gd) + [scripts/ui/unit_info_card.gd](../../scripts/ui/unit_info_card.gd) | Reusable world-overlay bars and hover/tap unit info card used by TD combat units. |
 | [scenes/ui/top_resource_bar.tscn](../../scenes/ui/top_resource_bar.tscn) / [scripts/ui/top_resource_bar.gd](../../scripts/ui/top_resource_bar.gd) (`TopResourceBar`) | Shared full-width resource strip with placeholder icon swatches, context filtering, and live `EventBus` updates. |
 | [data/adventurers/*.tres](../../data/adventurers/) + [data/adventurers/spells/*.tres](../../data/adventurers/spells/) | `AdventurerData` and `SpellData` resource instances (see rosters below). |
 | [data/enemies/*.tres](../../data/enemies/) | Enemy types (see roster below). |
@@ -54,7 +55,9 @@ alternates:
   `randi_range(damage_min, damage_max) * spell_multiplier * anti_swarm_multiplier`, then reduced by
   enemy effective armour in `TDEnemy.take_damage()` (floored at 0).
   Attack visuals fire per hit (melee swing or ranged projectile/impact), and kills are removed
-  from simulation immediately before their death tween finishes on-screen.
+  from simulation immediately before their death tween finishes on-screen. Kill rewards now include:
+  bounty gold, optional enemy material drops (`EnemyData.drop_material_id` + `drop_amount`), and
+  progression rewards (Day 3 Goblin Warlord grants the barrier trinket when that gate is active).
 
 Win condition: no enemies left alive and no wave left to call. Loss condition: castle HP
 hits 0. Both stop the timer and set `battle_over`.
@@ -89,8 +92,9 @@ The timer isn't running continuously for the whole Day, though — see below.
 | Goblin Rider | `goblin_rider` | 20 | 0 | 1 cell every move step (plus occasional double-move burst) |
 | Goblin Shaman | `goblin_shaman` | 17 | 1 | 1 cell every move step (stuns nearby adventurers) |
 | Goblin Hexer | `goblin_hexer` | 30 | 2 | 1 cell every **other** move step (longer-range stun support) |
-| Large Goblin | `large_goblin` | 60 | 3 | 1 cell every **other** move step, and blocks the path behind it |
+| Large Goblin | `large_goblin` | 60 | 3 | 1 cell every **other** move step, blocks the path behind it, and drops Volatile Core |
 | Goblin Brute | `goblin_brute` | 85 | 5 | 1 cell every **other** move step, heavy-armour blocker |
+| Goblin Warlord | `goblin_warlord` | 180 | 7 | 1 cell every **other** move step, Day 3 boss gate target |
 
 ## Day / Wave Structure
 
@@ -105,6 +109,8 @@ The timer isn't running continuously for the whole Day, though — see below.
     a wave is already spawning.
   - `Auto-Call: ON/OFF` (secondary toggle) arms/disarms automatic calling of the next wave once
     the current one finishes spawning.
+  - `1x`, `2x`, `3x` speed buttons change `step_timer.wait_time` to
+    `step_interval / speed_multiplier`, accelerating both move and attack turns.
   - This removes the old single-button mode-switch ambiguity while keeping the same pacing logic
     (`auto_call_next` still controls automatic chaining, waves never overlap).
 - **The step timer pauses whenever the field is clear and no wave is actively spawning**
@@ -117,7 +123,8 @@ The timer isn't running continuously for the whole Day, though — see below.
   (4-step spacing) to demonstrate the path-blocking behavior. `difficulty_scalar = 1.0`.
 - The HUD's `WaveLabel` now shows
   `Day X — Wave Y/Z — Manual call|Auto-call armed — Enemies left to spawn: N`, and a dedicated
-  `WaveStateLabel` reports explicit state (`Prep`, `Spawning wave N`, `Breather`, `Final wave cleared`).
+  `WaveStateLabel` reports explicit state (`Prep`, `Spawning wave N`, `Breather`, `Final wave cleared`)
+  plus the active speed multiplier (`Speed: 1x|2x|3x`).
 - `EventBus.day_started/day_won/day_lost` now emit `day_data.day_index` instead of a hardcoded 0.
 - [data/waves/day_2.tres](../../data/waves/day_2.tres) is a harder second Day (`difficulty_scalar =
   1.3`, `completion_reward = 200`): goblins, then Goblin Riders, then Goblin Hexers, then Large
@@ -208,6 +215,23 @@ enemy's current path cell — melee units can only hit true neighbors unless the
 The Berserker still has the slowest charge (lowest `attack_regen`) among recruitables. See
 [docs/systems/castle.md](castle.md) for how the roster is recruited (Tavern) and selected
 (Quarters) before a battle.
+
+## Combat Unit UI (bars + info cards)
+
+- Floating combat numbers were replaced by compact bars:
+  - **Enemies:** red rounded HP bar only (no numeric fallback).
+  - **Adventurers:** top HP bar + two-part action readiness display.
+- Adventurer action readiness now has:
+  1. a bottom fill bar for progress toward the next full action,
+  2. pip rows above it for stored full actions (empty/full states shown together).
+- Action storage is capped per adventurer by data:
+  - `max_stored_actions = attack_pool * action_storage_multiplier`
+  - `action_storage_multiplier` lives in `AdventurerData` and each `data/adventurers/*.tres`
+    resource (Berserker currently set to `10`).
+- Hover/tap inspection:
+  - Desktop hover over an adventurer opens an info card near cursor and shows that unit's range.
+  - Click/tap pins an adventurer or enemy card; click/tap empty space closes it.
+  - Placement/reposition controls keep priority: cards are disabled while placement is open.
 
 ## Combat Animation Details
 
@@ -328,7 +352,7 @@ The Berserker still has the slowest charge (lowest `attack_regen`) among recruit
 - Reinforcement and repositioning are now allowed during between-wave breathers (see
   [Placement, Reinforcement & Range Preview](#placement-reinforcement--range-preview)), but not
   while a wave is actively spawning or enemies are on the field.
-- Status readability is intentionally minimal (short text + tint + trigger popups only); there is
-  still no full icon+tooltip inspection layer.
+- Status readability remains lightweight (short text + tint + trigger popups); there is still no
+  full dedicated status-icon inspector yet.
 - Days 1–5 exist and `GameState.total_known_days()` now discovers them dynamically — further
   Day authoring remains data-only.

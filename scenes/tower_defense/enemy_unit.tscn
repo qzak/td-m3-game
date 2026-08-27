@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/tower_defense/enemy.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/world_stat_bar.gd" id="2"]
 
 [node name="EnemyUnit" type="Node2D"]
 script = ExtResource("1")
@@ -9,14 +10,17 @@ script = ExtResource("1")
 color = Color(0.8, 0.2, 0.2, 1)
 polygon = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
 
-[node name="HPLabel" type="Label" parent="."]
-position = Vector2(-20, -34)
-size = Vector2(40, 20)
-horizontal_alignment = 1
-text = "10"
+[node name="HPBar" type="Node2D" parent="."]
+position = Vector2(0, -32)
+script = ExtResource("2")
+bar_size = Vector2(30, 5)
+fill_color = Color(0.86, 0.2, 0.2, 1)
+empty_color = Color(0.16, 0.08, 0.08, 0.95)
+border_color = Color(0, 0, 0, 0.85)
+corner_radius = 2
 
 [node name="StatusLabel" type="Label" parent="."]
-position = Vector2(-28, -50)
+position = Vector2(-28, -52)
 size = Vector2(56, 16)
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 10

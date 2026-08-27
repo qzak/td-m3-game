@@ -4,6 +4,7 @@ class_name TDBattleController
 
 const ENEMY_SCENE := preload("res://scenes/tower_defense/enemy_unit.tscn")
 const ADVENTURER_SCENE := preload("res://scenes/tower_defense/adventurer_unit.tscn")
+const UNIT_INFO_CARD_SCRIPT := preload("res://scripts/ui/unit_info_card.gd")
 
 @export var step_interval: float = 0.5
 @export var day_data: DayData
@@ -23,9 +24,13 @@ const ADVENTURER_SCENE := preload("res://scenes/tower_defense/adventurer_unit.ts
 @onready var selected_label: Label = $UI/HUD/SelectedLabel
 @onready var start_button: Button = $UI/HUD/Controls/StartBattleButton
 @onready var auto_call_button: Button = $UI/HUD/Controls/AutoCallButton
+@onready var speed_1x_button: Button = $UI/HUD/Controls/Speed1xButton
+@onready var speed_2x_button: Button = $UI/HUD/Controls/Speed2xButton
+@onready var speed_3x_button: Button = $UI/HUD/Controls/Speed3xButton
 @onready var return_button: Button = $UI/HUD/Controls/ReturnToCastleButton
 @onready var placement_buttons_container: Container = $UI/HUD/Controls/PlacementButtonsContainer
 @onready var top_resource_bar: Control = $UI/HUD/TopResourceBar
+@onready var hud: Control = $UI/HUD
 
 var enemies: Array[TDEnemy] = []
 var adventurers: Array[TDAdventurer] = []
@@ -53,6 +58,12 @@ var placement_open: bool = true
 var picked_up_adventurer: TDAdventurer = null
 var picked_up_origin_cell: Vector2i = Vector2i.ZERO
 var day_start_currency: int = 0
+var unit_info_card: UnitInfoCard
+var pinned_enemy_for_card: TDEnemy = null
+var pinned_adventurer_for_card: TDAdventurer = null
+var hovered_adventurer_for_card: TDAdventurer = null
+var last_pointer_screen_position: Vector2 = Vector2.ZERO
+var speed_multiplier: int = 1
 
 func _ready() -> void:
 	castle_hp = starting_castle_hp
@@ -75,13 +86,19 @@ func _ready() -> void:
 
 	start_button.pressed.connect(_on_start_button_pressed)
 	auto_call_button.pressed.connect(_on_auto_call_button_pressed)
+	speed_1x_button.pressed.connect(func() -> void: _set_battle_speed(1))
+	speed_2x_button.pressed.connect(func() -> void: _set_battle_speed(2))
+	speed_3x_button.pressed.connect(func() -> void: _set_battle_speed(3))
 	return_button.visible = false
 	return_button.pressed.connect(_on_return_button_pressed)
 
 	_spawn_towers()
 	top_resource_bar.set_context("battle")
+	unit_info_card = UNIT_INFO_CARD_SCRIPT.new()
+	hud.add_child(unit_info_card)
 
 	_update_wave_controls()
+	_update_speed_buttons()
 	_update_hud()
 
 ## Builds one placement button per adventurer in the active roster (falls back to a default
@@ -205,9 +222,26 @@ func _update_wave_controls() -> void:
 	auto_call_button.disabled = not can_toggle_auto
 	auto_call_button.text = "Auto-Call: ON" if auto_call_next else "Auto-Call: OFF"
 
+func _set_battle_speed(multiplier: int) -> void:
+	speed_multiplier = clampi(multiplier, 1, 3)
+	step_timer.wait_time = step_interval / float(speed_multiplier)
+	if not step_timer.is_stopped():
+		step_timer.start()
+	_update_speed_buttons()
+	_update_hud()
+
+func _update_speed_buttons() -> void:
+	speed_1x_button.disabled = speed_multiplier == 1
+	speed_2x_button.disabled = speed_multiplier == 2
+	speed_3x_button.disabled = speed_multiplier == 3
+	speed_1x_button.text = "1x" if speed_multiplier != 1 else "1x ✓"
+	speed_2x_button.text = "2x" if speed_multiplier != 2 else "2x ✓"
+	speed_3x_button.text = "3x" if speed_multiplier != 3 else "3x ✓"
+
 func _select_adventurer(data: AdventurerData) -> void:
 	if not placement_open:
 		return
+	_clear_unit_info()
 	# Each recruited adventurer is a unique individual, so only one copy can be on the field.
 	if placed_adventurer_ids.has(data.id):
 		return
@@ -217,7 +251,10 @@ func _select_adventurer(data: AdventurerData) -> void:
 	selected_label.text = 'Selected: %s (click a grid tile to place)' % data.display_name
 
 func _on_grid_cell_hovered(cell: Vector2i, valid: bool) -> void:
-	if not placement_open or not valid:
+	if not placement_open:
+		_refresh_unit_info()
+		return
+	if not valid:
 		grid.clear_range_preview()
 		return
 	var active := selected_adventurer_data
@@ -231,6 +268,7 @@ func _on_grid_cell_hovered(cell: Vector2i, valid: bool) -> void:
 func _on_grid_cell_clicked(cell: Vector2i) -> void:
 	if not placement_open:
 		return
+	_clear_unit_info()
 
 	# Placing a fresh reserve unit selected via a Place button.
 	if selected_adventurer_data != null:
@@ -274,9 +312,134 @@ func _on_grid_cell_clicked(cell: Vector2i) -> void:
 		selected_label.text = "Moving %s (click a tile to move, or its own tile to cancel)" % unit.data.display_name
 		grid.set_range_preview(cell, unit.data.range_min, unit.data.range_max)
 
+func _unhandled_input(event: InputEvent) -> void:
+	if placement_open:
+		return
+	if event is InputEventMouseMotion:
+		last_pointer_screen_position = event.position
+		_handle_hover_card(event.position)
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		last_pointer_screen_position = event.position
+		_handle_tap_or_click_card(event.position)
+	elif event is InputEventScreenTouch and event.pressed:
+		last_pointer_screen_position = event.position
+		_handle_tap_or_click_card(event.position)
+
+func _handle_hover_card(screen_position: Vector2) -> void:
+	if OS.has_feature("mobile") or pinned_enemy_for_card != null or pinned_adventurer_for_card != null:
+		return
+	hovered_adventurer_for_card = _pick_adventurer_at_screen(screen_position)
+	_refresh_unit_info()
+
+func _handle_tap_or_click_card(screen_position: Vector2) -> void:
+	var enemy := _pick_enemy_at_screen(screen_position)
+	if enemy != null:
+		pinned_enemy_for_card = enemy
+		pinned_adventurer_for_card = null
+		hovered_adventurer_for_card = null
+		_refresh_unit_info()
+		return
+	var adventurer := _pick_adventurer_at_screen(screen_position)
+	if adventurer != null:
+		pinned_adventurer_for_card = adventurer
+		pinned_enemy_for_card = null
+		hovered_adventurer_for_card = null
+		_refresh_unit_info()
+		return
+	_clear_unit_info()
+
+func _pick_adventurer_at_screen(screen_position: Vector2) -> TDAdventurer:
+	var best: TDAdventurer = null
+	var best_distance := 999999.0
+	for adventurer in adventurers:
+		if not is_instance_valid(adventurer):
+			continue
+		var distance := adventurer.global_position.distance_to(screen_position)
+		if distance <= 22.0 and distance < best_distance:
+			best = adventurer
+			best_distance = distance
+	return best
+
+func _pick_enemy_at_screen(screen_position: Vector2) -> TDEnemy:
+	var best: TDEnemy = null
+	var best_distance := 999999.0
+	for enemy in enemies:
+		if not is_instance_valid(enemy) or enemy.dying:
+			continue
+		var distance := enemy.global_position.distance_to(screen_position)
+		if distance > 20.0:
+			continue
+		if best == null or enemy.path_index > best.path_index or (enemy.path_index == best.path_index and distance < best_distance):
+			best = enemy
+			best_distance = distance
+	return best
+
+func _clear_unit_info() -> void:
+	pinned_enemy_for_card = null
+	pinned_adventurer_for_card = null
+	hovered_adventurer_for_card = null
+	_refresh_unit_info()
+
+func _refresh_unit_info() -> void:
+	if placement_open:
+		if unit_info_card:
+			unit_info_card.hide_card()
+		return
+	if pinned_enemy_for_card != null and not is_instance_valid(pinned_enemy_for_card):
+		pinned_enemy_for_card = null
+	if pinned_adventurer_for_card != null and not is_instance_valid(pinned_adventurer_for_card):
+		pinned_adventurer_for_card = null
+	if hovered_adventurer_for_card != null and not is_instance_valid(hovered_adventurer_for_card):
+		hovered_adventurer_for_card = null
+
+	if pinned_enemy_for_card != null:
+		_show_enemy_card(pinned_enemy_for_card)
+		grid.clear_range_preview()
+		return
+	var active_adventurer := pinned_adventurer_for_card if pinned_adventurer_for_card != null else hovered_adventurer_for_card
+	if active_adventurer != null:
+		_show_adventurer_card(active_adventurer)
+		grid.set_range_preview(active_adventurer.cell, active_adventurer.data.range_min, active_adventurer.data.range_max)
+		return
+	if unit_info_card:
+		unit_info_card.hide_card()
+	grid.clear_range_preview()
+
+func _show_adventurer_card(adventurer: TDAdventurer) -> void:
+	if unit_info_card == null:
+		return
+	var action_cost := maxi(adventurer.data.attack_pool, 1)
+	var capacity_actions := maxi(adventurer.data.action_storage_multiplier, 1)
+	var stored_actions := mini(adventurer.attack_pool_current / action_cost, capacity_actions)
+	unit_info_card.show_card(
+		adventurer.data.display_name,
+		[
+			"HP: %d/%d" % [adventurer.current_health, adventurer.data.max_health],
+			"Damage: %d-%d | Range: %d-%d" % [adventurer.data.damage_min, adventurer.data.damage_max, adventurer.data.range_min, adventurer.data.range_max],
+			"Action: %d/%d stored | Regen +%d" % [stored_actions, capacity_actions, adventurer.data.attack_regen],
+			"Stunned: %d step(s)" % adventurer.stunned_steps_remaining if adventurer.stunned_steps_remaining > 0 else "Stunned: no",
+		],
+		last_pointer_screen_position
+	)
+
+func _show_enemy_card(enemy: TDEnemy) -> void:
+	if unit_info_card == null:
+		return
+	unit_info_card.show_card(
+		enemy.data.display_name,
+		[
+			"HP: %d/%d" % [enemy.current_health, enemy.max_health],
+			"Armour: %d" % enemy.data.armour,
+			"Move: %d cell(s), every %d step(s)" % [enemy.data.move_steps_per_turn, enemy.data.move_period],
+			"Bounty: +%d coins" % enemy.data.bounty,
+		],
+		last_pointer_screen_position
+	)
+
 ## Opens the placement window (before the first wave, and during between-wave breathers),
 ## re-enabling Place buttons for any roster members not already on the field.
 func _open_placement() -> void:
+	_clear_unit_info()
 	placement_open = true
 	for def_id: String in adventurer_buttons:
 		adventurer_buttons[def_id].disabled = placed_adventurer_ids.has(def_id)
@@ -400,7 +563,7 @@ func _attack_step() -> void:
 						_apply_on_hit_statuses(target, status_profiles)
 				for kill in kills:
 					enemies.erase(kill)
-					GameState.add_currency(kill.data.bounty)
+					_on_enemy_killed(kill)
 					kill.play_death_animation()
 		else:
 			while adventurer.can_attack():
@@ -412,10 +575,11 @@ func _attack_step() -> void:
 				var dmg := _roll_damage(adventurer, target, damage_multiplier, status_profiles)
 				if target.take_damage(dmg):
 					enemies.erase(target)
-					GameState.add_currency(target.data.bounty)
+					_on_enemy_killed(target)
 					target.play_death_animation()
 				else:
 					_apply_on_hit_statuses(target, status_profiles)
+	_refresh_unit_info()
 	_check_end_conditions()
 
 func _play_attack_visual(adventurer: TDAdventurer, target: TDEnemy) -> void:
@@ -504,6 +668,13 @@ func _spawn_enemy(enemy_data: EnemyData) -> void:
 	units_root.add_child(enemy)
 	enemy.setup(enemy_data, grid, day_data.difficulty_scalar)
 	enemies.append(enemy)
+
+func _on_enemy_killed(enemy: TDEnemy) -> void:
+	GameState.add_currency(enemy.data.bounty)
+	if not enemy.data.drop_material_id.is_empty() and enemy.data.drop_amount > 0:
+		GameState.add_material(enemy.data.drop_material_id, enemy.data.drop_amount)
+	if day_data.day_index == 3 and enemy.data.id == "goblin_warlord" and GameState.gate_state("magic_barrier") == GameState.GATE_ACTIVE:
+		GameState.grant_barrier_trinket()
 
 ## Fixed last-resort defenders flanking the castle door; never placed/removed by the player.
 func _spawn_towers() -> void:
@@ -595,7 +766,8 @@ func _update_hud() -> void:
 	wave_label.text = "Day %d — Wave %d/%d — %s — Enemies left to spawn: %d" % [
 		day_data.day_index, wave_display, day_data.waves.size(), mode_text, total_enemies_remaining_to_spawn
 	]
-	wave_state_label.text = "Wave State: %s" % _wave_state_text()
+	wave_state_label.text = "Wave State: %s | Speed: %dx" % [_wave_state_text(), speed_multiplier]
+	_refresh_unit_info()
 
 func _wave_state_text() -> String:
 	if battle_over:

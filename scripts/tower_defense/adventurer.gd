@@ -10,9 +10,11 @@ var cell: Vector2i
 var attack_pool_current: int = 0
 var stunned_steps_remaining: int = 0
 var selected_spell_id: String = ""  # chosen spell for MAGIC units; "" = use the type's default
+var current_health: int = 1
 
 @onready var body: Polygon2D = $Body
-@onready var pool_label: Label = $PoolLabel
+@onready var hp_bar: WorldStatBar = $HPBar
+@onready var action_meter: AdventurerActionMeter = $ActionMeter
 
 func setup(p_data: AdventurerData, p_cell: Vector2i, world_pos: Vector2, p_spell_id: String = "") -> void:
 	data = p_data
@@ -20,10 +22,11 @@ func setup(p_data: AdventurerData, p_cell: Vector2i, world_pos: Vector2, p_spell
 	position = world_pos
 	attack_pool_current = 0
 	stunned_steps_remaining = 0
+	current_health = maxi(data.max_health, 1)
 	selected_spell_id = p_spell_id
 	if selected_spell_id == "" and not data.spell_ids.is_empty():
 		selected_spell_id = data.spell_ids[0]
-	_update_label()
+	_update_overlay()
 
 ## Repositions the unit to a new cell without touching its charge/stun state
 ## (used for mid-battle repositioning during between-wave breathers).
@@ -32,23 +35,23 @@ func move_to(p_cell: Vector2i, world_pos: Vector2) -> void:
 	position = world_pos
 
 func regen() -> void:
-	attack_pool_current += data.attack_regen
-	_update_label()
+	attack_pool_current = mini(attack_pool_current + data.attack_regen, _max_stored_actions())
+	_update_overlay()
 
 func consume_pool() -> void:
-	attack_pool_current -= data.attack_pool
-	_update_label()
+	attack_pool_current = maxi(attack_pool_current - data.attack_pool, 0)
+	_update_overlay()
 
 func apply_stun(steps: int) -> void:
 	stunned_steps_remaining = maxi(stunned_steps_remaining, steps)
-	_update_label()
+	_update_overlay()
 
 func tick_stun() -> void:
 	stunned_steps_remaining = maxi(stunned_steps_remaining - 1, 0)
-	_update_label()
+	_update_overlay()
 
 func can_attack() -> bool:
-	return stunned_steps_remaining <= 0 and attack_pool_current >= data.attack_pool
+	return stunned_steps_remaining <= 0 and data.attack_pool > 0 and attack_pool_current >= data.attack_pool
 
 func is_in_range(target_cell: Vector2i) -> bool:
 	# Manhattan distance gives a diamond-shaped range instead of a square.
@@ -111,9 +114,21 @@ func _spawn_impact(target_position: Vector2, color: Color) -> void:
 	impact_tween.tween_property(impact, "modulate:a", 0.0, 0.12).set_trans(Tween.TRANS_LINEAR)
 	impact_tween.finished.connect(impact.queue_free)
 
-func _update_label() -> void:
-	if pool_label:
-		if stunned_steps_remaining > 0:
-			pool_label.text = "STUNNED (%d)" % stunned_steps_remaining
-		else:
-			pool_label.text = "%d/%d" % [attack_pool_current, data.attack_pool]
+func _max_stored_actions() -> int:
+	var action_cost := maxi(data.attack_pool, 1)
+	var multiplier := maxi(data.action_storage_multiplier, 1)
+	return action_cost * multiplier
+
+func _update_overlay() -> void:
+	if hp_bar:
+		hp_bar.set_ratio(float(current_health) / float(maxi(data.max_health, 1)))
+	if action_meter == null:
+		return
+	var action_cost := maxi(data.attack_pool, 1)
+	var capacity := maxi(data.action_storage_multiplier, 1)
+	var full_actions := mini(attack_pool_current / action_cost, capacity)
+	var partial_fill := 0.0
+	if full_actions < capacity:
+		partial_fill = float(attack_pool_current % action_cost) / float(action_cost)
+	action_meter.set_capacity(capacity)
+	action_meter.set_state(full_actions, partial_fill, stunned_steps_remaining > 0)

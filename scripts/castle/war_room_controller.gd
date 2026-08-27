@@ -5,6 +5,7 @@ signal day_start_requested(day_index: int)
 
 @onready var day_list: VBoxContainer = $DayList
 @onready var last_result_label: Label = $LastResultLabel
+@onready var objective_label: Label = $ObjectiveLabel
 
 func _ready() -> void:
 	_build_day_list()
@@ -14,11 +15,12 @@ func refresh() -> void:
 
 func _build_day_list() -> void:
 	_refresh_last_result()
+	objective_label.text = GameState.castle_objective_text()
 	for child in day_list.get_children():
 		child.queue_free()
 	for day_index in range(1, GameState.total_known_days() + 1):
 		var button := Button.new()
-		var locked: bool = day_index > GameState.unlocked_day_index
+		var locked: bool = not GameState.can_start_day(day_index)
 		button.text = "Start Day %d" % day_index if not locked else "Start Day %d (Locked)" % day_index
 		button.disabled = locked
 		button.pressed.connect(_on_start_day_pressed.bind(day_index))

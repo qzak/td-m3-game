@@ -16,6 +16,12 @@ position = Vector2(20, 52)
 size_flags_horizontal = 3
 text = "Last Day Result: none yet"
 
+[node name="ObjectiveLabel" type="Label" parent="."]
+position = Vector2(20, 72)
+size = Vector2(980, 36)
+autowrap_mode = 2
+text = "Objective:"
+
 [node name="DayList" type="VBoxContainer" parent="."]
-position = Vector2(20, 94)
+position = Vector2(20, 116)
 theme_override_constants/separation = 8

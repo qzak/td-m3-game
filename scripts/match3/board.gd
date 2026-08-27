@@ -6,6 +6,7 @@ const SOLVER_SCRIPT = preload("res://scripts/match3/match_solver.gd")
 const WIDTH := 10
 const HEIGHT := 10
 const DESCENT_ROWS := 5
+const BARRIER_LOCK_ROW := 6
 
 signal match_resolved(rewards: Dictionary)
 signal depth_advanced(new_depth: int)
@@ -73,11 +74,15 @@ func serialize() -> Array:
 func try_swap(first: Vector2i, second: Vector2i) -> bool:
 	if not _is_valid_cell(first) or not _is_valid_cell(second):
 		return false
+	if _cell_blocked_by_barrier(first) or _cell_blocked_by_barrier(second):
+		return false
 	if absi(first.x - second.x) + absi(first.y - second.y) != 1:
 		return false
 	var first_tile = tiles[first.y][first.x]
 	var second_tile = tiles[second.y][second.x]
 	if first_tile == null or second_tile == null:
+		return false
+	if _is_immovable(first_tile) or _is_immovable(second_tile):
 		return false
 	tiles[first.y][first.x] = second_tile
 	tiles[second.y][second.x] = first_tile
@@ -98,10 +103,14 @@ func try_swap(first: Vector2i, second: Vector2i) -> bool:
 func try_move_to_empty(source: Vector2i, destination: Vector2i) -> bool:
 	if not _is_valid_cell(source) or not _is_valid_cell(destination):
 		return false
+	if _cell_blocked_by_barrier(source) or _cell_blocked_by_barrier(destination):
+		return false
 	if source.y != destination.y or source.x == destination.x:
 		return false
 	var tile = tiles[source.y][source.x]
 	if tile == null or tiles[destination.y][destination.x] != null:
+		return false
+	if _is_immovable(tile):
 		return false
 	# Commit the horizontal move into the empty destination
 	tiles[destination.y][destination.x] = tile
@@ -135,8 +144,11 @@ func _resolve_matches() -> void:
 		if matches.is_empty():
 			break
 		var cleared_cells: Array = []
+		var cleared_any := false
 		for cell in matches:
 			var tile = tiles[cell.y][cell.x]
+			if tile != null and _tile_locked_from_clear(tile):
+				continue
 			if tile != null and not tile.reward_material_id.is_empty():
 				rewards[tile.reward_material_id] = rewards.get(tile.reward_material_id, 0) + tile.reward_amount
 			if tile != null:
@@ -144,7 +156,10 @@ func _resolve_matches() -> void:
 					"cell": cell,
 					"tile_id": tile.id,
 				})
+				cleared_any = true
 			tiles[cell.y][cell.x] = null
+		if not cleared_any:
+			break
 		if not cleared_cells.is_empty():
 			animation_event.emit({
 				"type": "clear",
@@ -185,6 +200,12 @@ func _top_rows_are_empty() -> bool:
 	return true
 
 func can_descend() -> bool:
+	if GameState.gate_state("hardness_a") == GameState.GATE_ACTIVE:
+		return false
+	if GameState.gate_state("hardness_b") == GameState.GATE_ACTIVE:
+		return false
+	if GameState.gate_state("magic_barrier") == GameState.GATE_ACTIVE and not GameState.progression.get("barrier_trinket_activated", false):
+		return false
 	return _top_rows_are_empty()
 
 func top_rows_clear_count() -> int:
@@ -245,3 +266,93 @@ func _new_random_tile(_cell: Vector2i):
 
 func _is_valid_cell(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.x < WIDTH and cell.y >= 0 and cell.y < HEIGHT
+
+func enforce_gate_tiles() -> bool:
+	if tiles.is_empty():
+		return false
+	var changed := false
+	if GameState.gate_state("hardness_a") == GameState.GATE_ACTIVE and _count_tiles_with_id("hard_stone") == 0:
+		changed = _place_gate_tile("hard_stone") or changed
+	if GameState.gate_state("hardness_b") == GameState.GATE_ACTIVE and not GameState.shovel_unlocked and _count_tiles_with_id("rooted_stone") == 0:
+		changed = _place_gate_tile("rooted_stone") or changed
+	return changed
+
+func can_use_dynamite(cell: Vector2i) -> bool:
+	if not _is_valid_cell(cell):
+		return false
+	var tile = tiles[cell.y][cell.x]
+	return tile != null and int(tile.hardness_tier) > 0 and GameState.dynamite_count > 0
+
+func use_dynamite(cell: Vector2i) -> bool:
+	if not can_use_dynamite(cell):
+		return false
+	if not GameState.consume_dynamite():
+		return false
+	var tile = tiles[cell.y][cell.x]
+	tiles[cell.y][cell.x] = null
+	animation_event.emit({
+		"type": "clear",
+		"cells": [{"cell": cell, "tile_id": tile.id}],
+	})
+	var gravity_moves := _apply_gravity()
+	if not gravity_moves.is_empty():
+		animation_event.emit({
+			"type": "gravity",
+			"moves": gravity_moves,
+		})
+	board_changed.emit()
+	return true
+
+func _tile_locked_from_clear(tile) -> bool:
+	if tile == null:
+		return false
+	if int(tile.hardness_tier) > 0 and GameState.gate_state("hardness_a") == GameState.GATE_ACTIVE:
+		return true
+	if bool(tile.immovable) and not GameState.shovel_unlocked:
+		return true
+	return false
+
+func _is_immovable(tile) -> bool:
+	if tile == null:
+		return false
+	return bool(tile.immovable) and not GameState.shovel_unlocked
+
+func _cell_blocked_by_barrier(cell: Vector2i) -> bool:
+	if GameState.gate_state("magic_barrier") != GameState.GATE_ACTIVE:
+		return false
+	if GameState.progression.get("barrier_trinket_activated", false):
+		return false
+	return cell.y >= BARRIER_LOCK_ROW
+
+func _count_tiles_with_id(tile_id: String) -> int:
+	var count := 0
+	for y in range(HEIGHT):
+		for x in range(WIDTH):
+			var tile = tiles[y][x]
+			if tile != null and str(tile.id) == tile_id:
+				count += 1
+	return count
+
+func _place_gate_tile(tile_id: String) -> bool:
+	if not tile_definitions.has(tile_id):
+		return false
+	var target_cell := Vector2i(-1, -1)
+	for y in range(DESCENT_ROWS):
+		for x in range(WIDTH):
+			if tiles[y][x] != null:
+				target_cell = Vector2i(x, y)
+				break
+		if target_cell.x >= 0:
+			break
+	if target_cell.x < 0:
+		for y in range(HEIGHT):
+			for x in range(WIDTH):
+				if tiles[y][x] != null:
+					target_cell = Vector2i(x, y)
+					break
+			if target_cell.x >= 0:
+				break
+	if target_cell.x < 0:
+		return false
+	tiles[target_cell.y][target_cell.x] = tile_definitions[tile_id].duplicate()
+	return true

@@ -20,6 +20,7 @@ alongside code changes so it stays a reliable reference. See
 | [scenes/castle/buildings/armoury.tscn](../../scenes/castle/buildings/armoury.tscn) / [scripts/castle/armoury_controller.gd](../../scripts/castle/armoury_controller.gd) (`ArmouryController`) | Lists owned crafted items and equips/unequips them onto active-roster adventurers. |
 | [scenes/castle/buildings/towers.tscn](../../scenes/castle/buildings/towers.tscn) / [scripts/castle/towers_panel.gd](../../scripts/castle/towers_panel.gd) (`TowersPanel`) | Minimal panel — Towers has no other player-facing UI yet, just its upgrade row. |
 | [scenes/castle/buildings/war_room.tscn](../../scenes/castle/buildings/war_room.tscn) / [scripts/castle/war_room_controller.gd](../../scripts/castle/war_room_controller.gd) (`WarRoomController`) | Dedicated day-selection panel; emits day-start requests, preserves unlock/lock behavior, and surfaces the most recent day result summary. |
+| [scenes/castle/buildings/workshop.tscn](../../scenes/castle/buildings/workshop.tscn) / [scripts/castle/workshop_controller.gd](../../scripts/castle/workshop_controller.gd) (`WorkshopController`) | Progression-tool crafting panel (Dynamite, Shovel, Trinket attunement) tied to active mine gates and workshop unlock state. |
 | [scenes/castle/buildings/building_upgrade_row.tscn](../../scenes/castle/buildings/building_upgrade_row.tscn) / [scripts/castle/building_upgrade_row.gd](../../scripts/castle/building_upgrade_row.gd) (`BuildingUpgradeRow`) | Reusable component embedded in every building panel: shows current/next level and cost, spends currency+materials via `GameState.upgrade_building()`. |
 | [data/buildings/*.tres](../../data/buildings/) | `BuildingData` resources (`max_level`, per-level currency/material costs, optional per-level capacity/timer/speed vectors) — one per building id, including `towers.tres` (combat stats still live in `towers_stats.tres`/`TowerData`). |
 | [data/items/*.tres](../../data/items/) | `ItemData` resources for the 6 craftable weapons/armour pieces (see Weapon/Armour Smith section below). |
@@ -30,18 +31,22 @@ alongside code changes so it stays a reliable reference. See
 
 - `castle.tscn` is the project's boot scene (`run/main_scene` in `project.godot`). `CastleController._ready()`
   calls `SaveManager.load_game()` immediately, then wires up all building buttons (Tavern, Quarters,
-  Smelter, Weapon Smith, Armour Smith, Armoury, Towers, War Room) plus Enter Mine.
+  Smelter, Weapon Smith, Armour Smith, Armoury, Towers, War Room, Workshop) plus Enter Mine.
 - Exactly one building panel is visible at a time — `_show_panel()` iterates `all_panels`, sets
   `visible = (p == panel)`, and calls `panel.refresh()` when available.
 - Entering any building now enables **focus mode**: the main building button grid hides, a dedicated
   `Back` button appears, and the chosen panel becomes the primary view. Pressing `Back` returns to
   the root building list.
 - Day selection moved out of the root Castle screen into the **War Room** panel. War Room builds one
-  "Start Day N" button (`1..GameState.total_known_days()`), marks any day past
-  `GameState.unlocked_day_index` as `(Locked)`, and emits the selected day back to Castle to start
+  "Start Day N" button (`1..GameState.total_known_days()`), marks unavailable days as `(Locked)` based on
+  `GameState.can_start_day()`, and emits the selected day back to Castle to start
   `td_battle.tscn`.
 - War Room now also shows a compact **Last Day Result** line (win/loss, coin delta, unlock result)
   using metadata stored in `GameState.last_day_result`.
+- Castle now surfaces a persistent **Objective** line driven by `GameState.castle_objective_text()`
+  so progression blockers and next steps are always visible in the hub and War Room.
+- The Mine entry is progression-gated: it remains disabled until Day 1 is cleared.
+- Workshop unlocks when the first mine depth is cleared and then drives all gate-tool crafting loops.
 - On returning from a battle (`TDBattleController`'s "Return to Castle" button, shown on
   `day_won`/`day_lost`), the scene reloads `castle.tscn` fresh — `CastleController._ready()` runs
   again and reloads the save, so anything `SaveManager` persisted mid-battle carries over (including
@@ -55,7 +60,7 @@ alongside code changes so it stays a reliable reference. See
 
 ## Building Upgrades
 
-- Every building (`tavern`, `quarters`, `smelter`, `weapon_smith`, `armour_smith`, `armoury`, `towers`)
+- Every building (`tavern`, `quarters`, `smelter`, `weapon_smith`, `armour_smith`, `armoury`, `towers`, `workshop`)
   has a `BuildingData` resource at `data/buildings/<id>.tres` (`max_level = 5`, 4-entry
   `upgrade_currency_costs`/`upgrade_material_costs` arrays — index 0 is the cost to go from level 1→2).
   `BuildingData` can also carry effect vectors consumed by Castle systems:

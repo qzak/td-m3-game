@@ -12,6 +12,7 @@ func _ready() -> void:
 	EventBus.day_lost.connect(func(_idx): save_game())
 	EventBus.mine_match_resolved.connect(func(_id, _amount): save_game())
 	EventBus.mine_depth_changed.connect(func(_depth): save_game())
+	EventBus.progression_changed.connect(func(_reason): save_game())
 
 func save_game() -> void:
 	var data := {
@@ -28,6 +29,10 @@ func save_game() -> void:
 		"last_day_result": GameState.last_day_result,
 		"mine_depth": GameState.mine_depth,
 		"mine_board_state": GameState.mine_board_state,
+		"progression": GameState.progression,
+		"gate_states": GameState.gate_states,
+		"dynamite_count": GameState.dynamite_count,
+		"shovel_unlocked": GameState.shovel_unlocked,
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
@@ -52,13 +57,23 @@ func load_game() -> bool:
 	var loaded_roster: Array = parsed.get("active_roster_ids", [])
 	if not loaded_roster.is_empty():
 		GameState.active_roster_ids = loaded_roster
-	GameState.building_levels = parsed.get("building_levels", GameState.building_levels)
+	var loaded_building_levels: Dictionary = parsed.get("building_levels", {})
+	for building_id in loaded_building_levels:
+		GameState.building_levels[building_id] = loaded_building_levels[building_id]
 	GameState.tavern_roster_ids = parsed.get("tavern_roster_ids", [])
 	GameState.tavern_next_refresh_unix = parsed.get("tavern_next_refresh_unix", 0)
 	GameState.tavern_reroll_count = parsed.get("tavern_reroll_count", 0)
 	GameState.smelter_queue = parsed.get("smelter_queue", [])
-	GameState.unlocked_day_index = parsed.get("unlocked_day_index", 0)
+	GameState.unlocked_day_index = parsed.get("unlocked_day_index", 1)
 	GameState.last_day_result = parsed.get("last_day_result", {})
 	GameState.mine_depth = parsed.get("mine_depth", 0)
 	GameState.mine_board_state = parsed.get("mine_board_state", [])
+	var loaded_progression: Dictionary = parsed.get("progression", {})
+	for key in loaded_progression:
+		GameState.progression[key] = loaded_progression[key]
+	var loaded_gate_states: Dictionary = parsed.get("gate_states", {})
+	for key in loaded_gate_states:
+		GameState.gate_states[key] = loaded_gate_states[key]
+	GameState.dynamite_count = parsed.get("dynamite_count", 0)
+	GameState.shovel_unlocked = parsed.get("shovel_unlocked", false)
 	return true

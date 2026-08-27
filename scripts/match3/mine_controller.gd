@@ -19,6 +19,8 @@ const TILE_COLORS := {
 	"copper": Color("c9794d"),
 	"iron": Color("aeb8bd"),
 	"gold": Color("e6c34f"),
+	"hard_stone": Color("4a5560"),
+	"rooted_stone": Color("48614c"),
 }
 
 class AnimatedTile extends RefCounted:
@@ -29,9 +31,11 @@ class AnimatedTile extends RefCounted:
 
 @onready var depth_label: Label = $UI/DepthLabel
 @onready var status_label: Label = $UI/StatusLabel
+@onready var objective_label: Label = $UI/ObjectiveLabel
 @onready var back_button: Button = $UI/BackButton
 @onready var descend_button: Button = $UI/DescendButton
 @onready var descend_progress_label: Label = $UI/DescendProgressLabel
+@onready var dynamite_button: Button = $UI/DynamiteButton
 @onready var top_resource_bar: Control = $UI/TopResourceBar
 
 var board: MineBoard
@@ -42,6 +46,7 @@ var animation_tiles: Array = []
 var hidden_cells: Dictionary = {}
 var visual_tile_ids: Array = []
 var post_animation_status := ""
+var dynamite_targeting := false
 var definitions: Array = [
 	preload("res://data/tiles/dirt.tres"),
 	preload("res://data/tiles/stone.tres"),
@@ -49,6 +54,8 @@ var definitions: Array = [
 	preload("res://data/tiles/copper.tres"),
 	preload("res://data/tiles/iron.tres"),
 	preload("res://data/tiles/gold.tres"),
+	preload("res://data/tiles/hard_stone.tres"),
+	preload("res://data/tiles/rooted_stone.tres"),
 ]
 
 func _ready() -> void:
@@ -64,6 +71,8 @@ func _ready() -> void:
 	_on_board_changed()
 	back_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/castle/castle.tscn"))
 	descend_button.pressed.connect(_on_descend_pressed)
+	dynamite_button.pressed.connect(_on_dynamite_pressed)
+	EventBus.progression_changed.connect(func(_reason): _update_hud())
 	top_resource_bar.set_context("mine")
 	_update_hud()
 	set_process(true)
@@ -79,6 +88,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var cell := Vector2i(floor((event.position - BOARD_ORIGIN) / CELL_SIZE))
 		if cell.x >= 0 and cell.x < BOARD_WIDTH and cell.y >= 0 and cell.y < BOARD_HEIGHT:
+			if dynamite_targeting:
+				if board.use_dynamite(cell):
+					dynamite_targeting = false
+					_set_status("Dynamite detonated.")
+				else:
+					_set_status("Select a hardened stone tile for Dynamite.")
+				_update_hud()
+				return
 			if selected_cell.x < 0:
 				selected_cell = cell
 				status_label.text = "Move along rows to clear the top edge (5 rows)"
@@ -87,7 +104,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				if moved:
 					_set_status("Resolving...")
 				else:
-					_set_status("That move makes no match")
+					var blocked_reason := GameState.mine_blocked_reason()
+					_set_status(blocked_reason if not blocked_reason.is_empty() else "That move makes no match")
 				selected_cell = Vector2i(-1, -1)
 				queue_redraw()
 
@@ -106,12 +124,16 @@ func _on_match_resolved(rewards: Dictionary) -> void:
 func _on_depth_advanced(new_depth: int) -> void:
 	GameState.mine_depth = new_depth
 	EventBus.mine_depth_changed.emit(new_depth)
+	if new_depth >= 1:
+		GameState.mark_first_depth_cleared()
 	post_animation_status = "New layer opened"
 	if not is_animating:
 		_set_status(post_animation_status)
 	_update_hud()
 
 func _on_board_changed() -> void:
+	if board.enforce_gate_tiles():
+		_sync_visual_tiles_from_board()
 	GameState.mine_board_state = board.serialize()
 	SaveManager.save_game()
 	if not is_animating and animation_queue.is_empty():
@@ -125,7 +147,21 @@ func _on_descend_pressed() -> void:
 	if board.descend():
 		_set_status("Descending...")
 	else:
-		_set_status("Not ready: clear top edge rows (%d/5)" % board.top_rows_clear_count())
+		var blocked_reason := GameState.mine_blocked_reason()
+		if not blocked_reason.is_empty():
+			_set_status(blocked_reason)
+		else:
+			_set_status("Not ready: clear top edge rows (%d/5)" % board.top_rows_clear_count())
+
+func _on_dynamite_pressed() -> void:
+	if is_animating:
+		return
+	dynamite_targeting = not dynamite_targeting
+	if dynamite_targeting:
+		_set_status("Select hardened stone to blast.")
+	else:
+		_set_status("Dynamite targeting cancelled.")
+	_update_hud()
 
 func _update_hud() -> void:
 	depth_label.text = "Mine depth: %d" % board.depth
@@ -134,6 +170,9 @@ func _update_hud() -> void:
 	descend_button.disabled = is_animating or not ready
 	descend_progress_label.text = "Descend ready: %d/5 top rows clear" % clear_rows
 	descend_progress_label.modulate = Color("b6e59c") if ready else Color("cfd6d2")
+	objective_label.text = GameState.castle_objective_text()
+	dynamite_button.text = "Use Dynamite (%d)%s" % [GameState.dynamite_count, " [Targeting]" if dynamite_targeting else ""]
+	dynamite_button.disabled = is_animating or GameState.dynamite_count <= 0
 
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, 1280, 720), Color("182329"))
@@ -152,6 +191,9 @@ func _draw() -> void:
 			draw_rect(rect, Color("dce5e1", 0.35), false, 2.0)
 			if not tile_id.is_empty():
 				draw_string(ThemeDB.fallback_font, rect.position + Vector2(9, 32), _tile_display_name(tile_id), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+	if GameState.gate_state("magic_barrier") == GameState.GATE_ACTIVE and not GameState.progression.get("barrier_trinket_activated", false):
+		var barrier_y := BOARD_ORIGIN.y + 6.0 * CELL_SIZE
+		draw_line(Vector2(BOARD_ORIGIN.x, barrier_y), Vector2(BOARD_ORIGIN.x + BOARD_WIDTH * CELL_SIZE, barrier_y), Color("8f4bd6"), 6.0)
 	for animated_tile in animation_tiles:
 		_draw_animated_tile(animated_tile)
 	if selected_cell.x >= 0:

@@ -25,19 +25,35 @@ offset_left = 32.0
 offset_top = 146.0
 text = "Select a tile"
 
+[node name="ObjectiveLabel" type="Label" parent="UI"]
+offset_left = 32.0
+offset_top = 166.0
+offset_right = 320.0
+offset_bottom = 228.0
+autowrap_mode = 2
+text = "Objective:"
+
 [node name="DescendButton" type="Button" parent="UI"]
 offset_left = 32.0
-offset_top = 184.0
+offset_top = 240.0
 offset_right = 190.0
-offset_bottom = 228.0
+offset_bottom = 284.0
 text = "Descend"
+disabled = true
+
+[node name="DynamiteButton" type="Button" parent="UI"]
+offset_left = 32.0
+offset_top = 292.0
+offset_right = 240.0
+offset_bottom = 336.0
+text = "Use Dynamite (0)"
 disabled = true
 
 [node name="DescendProgressLabel" type="Label" parent="UI"]
 offset_left = 32.0
-offset_top = 236.0
+offset_top = 344.0
 offset_right = 304.0
-offset_bottom = 261.0
+offset_bottom = 369.0
 text = "Descend ready: 0/5 top rows clear"
 
 [node name="BackButton" type="Button" parent="UI"]

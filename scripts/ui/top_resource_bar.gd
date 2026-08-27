@@ -6,6 +6,7 @@ const ENTRY_DEFS: Array[Dictionary] = [
 	{"id": "copper", "label": "Copper", "swatch": Color("c9794d"), "contexts": ["castle", "mine", "battle"]},
 	{"id": "iron", "label": "Iron", "swatch": Color("aeb8bd"), "contexts": ["castle", "mine", "battle"]},
 	{"id": "gold", "label": "Gold Ore", "swatch": Color("e6c34f"), "contexts": ["castle", "mine", "battle"]},
+	{"id": "volatile_core", "label": "Volatile Core", "swatch": Color("c85a52"), "contexts": ["castle", "battle", "smith"]},
 	{"id": "refined_copper", "label": "Ref. Copper", "swatch": Color("a65f3b"), "contexts": ["castle", "smith"]},
 	{"id": "refined_iron", "label": "Ref. Iron", "swatch": Color("8e999f"), "contexts": ["castle", "smith"]},
 	{"id": "refined_gold", "label": "Ref. Gold", "swatch": Color("c8a63d"), "contexts": ["castle", "smith"]},
@@ -19,10 +20,10 @@ const CONTEXT_TITLES := {
 }
 
 const CONTEXT_ORDER := {
-	"castle": ["currency", "refined_iron", "refined_copper", "refined_gold", "iron", "copper", "gold"],
-	"battle": ["currency", "iron", "copper", "gold"],
+	"castle": ["currency", "volatile_core", "refined_iron", "refined_copper", "refined_gold", "iron", "copper", "gold"],
+	"battle": ["currency", "volatile_core", "iron", "copper", "gold"],
 	"mine": ["currency", "gold", "iron", "copper"],
-	"smith": ["currency", "refined_iron", "refined_copper", "refined_gold", "iron", "copper", "gold"],
+	"smith": ["currency", "volatile_core", "refined_iron", "refined_copper", "refined_gold", "iron", "copper", "gold"],
 }
 
 @onready var context_label: Label = $Panel/Margin/ContentRow/ContextLabel

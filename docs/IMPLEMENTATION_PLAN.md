@@ -27,6 +27,7 @@ Detailed behavior lives in system docs:
 | 10. Top resource bar HUD 2.0 | ✅ Done | `TopResourceBar` replaces compact HUD in Castle/TD/Mine. |
 | 11. Castle focus mode + War Room | ✅ Done | Building focus mode and day selection migration complete. |
 | 12. Visual/UX continuity after HUD/focus changes | ✅ Done | Layout continuity and docs updates applied. |
+| 13. TD battle speed controls (1x/2x/3x) | ✅ Done | Speed buttons now scale move/attack turn cadence. |
 
 ### Recent completions (important for future agents)
 
@@ -73,6 +74,95 @@ These replace older “immediate steps” that are now complete.
 - Keep mandatory parse gate:
   - `godot --headless --path "D:\td-m3-game" --check-only --quit`
 - Keep compact smoke checks for Castle/TD/Mine after behavior changes.
+
+### H/I. Completed milestone archive (condensed)
+
+- ✅ **H. Guided progression loop** delivered:
+  - Day 1 -> Mine onboarding lock flow,
+  - reusable gate state model (`introduced/active/resolved`),
+  - Workshop + Dynamite/Shovel/Barrier Trinket loops,
+  - gate-aware Mine blockers and Castle/Mine objective surfacing.
+- ✅ **I. TD combat UI readability** delivered:
+  - compact HP/action bars (no enemy numeric HP fallback),
+  - per-adventurer action storage cap model,
+  - hover/tap unit info cards with range previews.
+- ✅ Validation for these deliveries used the mandatory parse gate:
+  - `godot --headless --path "D:\td-m3-game" --check-only --quit`
+- See as-built behavior in:
+  - [docs/systems/castle.md](systems/castle.md)
+  - [docs/systems/match3.md](systems/match3.md)
+  - [docs/systems/tower_defense.md](systems/tower_defense.md)
+
+### J. Castle Library + Bestiary roadmap (new priority)
+
+Goal: add a new Castle building (**Library**) that acts as the player’s bestiary, tracking encountered enemies and exposing clear stat/attack information.
+
+#### J1. Building role and progression fit
+- Library is a Castle-side knowledge/progression building, not a combat power spike by itself.
+- Primary function: convert enemy encounters into persistent knowledge entries.
+- Unlock timing should align with early-mid progression so the feature is useful before enemy roster grows too large.
+
+#### J2. Bestiary discovery rules
+- Enemy entries unlock when that enemy has been fought (encountered in TD), not only when killed.
+- Entry state model:
+  1. **Unknown** (not encountered),
+  2. **Discovered** (basic info visible),
+  3. **Detailed** (full stats/attack profile visible; optional future upgrades can expand detail depth).
+- Discovery state persists in save data.
+
+#### J3. Entry content scope
+- Per enemy bestiary entry should include:
+  - Name, portrait/sprite reference, and category tags.
+  - Core combat stats (HP, movement speed, resistances/armour if applicable).
+  - Attack profile (attack type, interval/rate, damage style, notable special effects).
+  - Drop hints/known rewards where applicable (consistent with progression gating design).
+- Keep terminology identical to TD combat UI labels to avoid confusion.
+
+#### J4. Library UX expectations
+- Library appears as a selectable Castle building/panel.
+- Bestiary list supports quick scan:
+  - Locked/unknown entries are visually distinct.
+  - Discovered entries show summary row + expandable/openable details.
+- Entry details should be readable at 1280x720 and remain controller/mobile-friendly.
+
+#### J5. Delivery slices (small, implementable packets)
+
+Packet 1 — Building scaffold
+- Add Library building data and Castle panel routing.
+- Add placeholder panel with empty-state messaging.
+
+Packet 2 — Encounter tracking backend
+- Track “enemy encountered” events from TD flow.
+- Persist encountered enemy IDs in save-compatible progression state.
+
+Packet 3 — Bestiary data binding
+- Define bestiary-facing enemy metadata (data-first, sourced from enemy resources where possible).
+- Build entry state resolution (unknown/discovered/detailed).
+
+Packet 4 — List + detail UI
+- Implement bestiary list view with locked/discovered states.
+- Implement detail card/page with stats + attacks breakdown.
+
+Packet 5 — Progression integration + polish
+- Wire unlock timing/requirements for Library access.
+- Add subtle “new entry discovered” feedback after battles.
+- Tune readability and navigation flow.
+
+#### J6. Data-first and architecture notes
+- Prefer storing bestiary presentation data in `data/` resources or in enemy resource fields (avoid duplicate hardcoded tables).
+- Reuse existing enemy stat sources; bestiary should reflect authoritative combat data.
+- Keep encounter tracking event-driven via existing battle/event systems.
+- Preserve save compatibility using additive fields/default empty collections for discovered entries.
+
+#### J7. Validation per packet
+- Mandatory:
+  - `godot --headless --path "D:\td-m3-game" --check-only --quit`
+- Smoke checks:
+  - Entering Library from Castle panel is stable and input-safe.
+  - First encounter with an enemy creates/updates the corresponding bestiary state.
+  - Save/load retains discovered entries and detail level correctly.
+  - Bestiary stats/attack info match live enemy behavior in TD.
+  - Unknown/discovered/detailed visuals are clearly distinguishable.
 
 ---
 

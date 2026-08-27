@@ -7,3 +7,5 @@ class_name MineTileData
 @export var depth_required: int = 0
 @export var reward_material_id: String = ""
 @export var reward_amount: int = 0
+@export var hardness_tier: int = 0
+@export var immovable: bool = false

@@ -95,6 +95,8 @@ func _effect_for_level(def: BuildingData, level: int) -> String:
 			return "Item slots %d" % _int_for_level(def.capacity_by_level, level, 2 + level)
 		"weapon_smith", "armour_smith":
 			return "Unlocks recipes up to Lv%d" % level
+		"workshop":
+			return "Tool queue slots %d" % _int_for_level(def.capacity_by_level, level, 1)
 		"towers":
 			var tower_data: TowerData = load("res://data/buildings/towers_stats.tres")
 			if tower_data == null:
