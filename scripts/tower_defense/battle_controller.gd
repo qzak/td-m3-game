@@ -24,9 +24,6 @@ const UNIT_INFO_CARD_SCRIPT := preload("res://scripts/ui/unit_info_card.gd")
 @onready var selected_label: Label = $UI/HUD/SelectedLabel
 @onready var start_button: Button = $UI/HUD/Controls/StartBattleButton
 @onready var auto_call_button: Button = $UI/HUD/Controls/AutoCallButton
-@onready var speed_1x_button: Button = $UI/HUD/Controls/Speed1xButton
-@onready var speed_2x_button: Button = $UI/HUD/Controls/Speed2xButton
-@onready var speed_3x_button: Button = $UI/HUD/Controls/Speed3xButton
 @onready var return_button: Button = $UI/HUD/Controls/ReturnToCastleButton
 @onready var placement_buttons_container: Container = $UI/HUD/Controls/PlacementButtonsContainer
 @onready var top_resource_bar: Control = $UI/HUD/TopResourceBar
@@ -63,7 +60,6 @@ var pinned_enemy_for_card: TDEnemy = null
 var pinned_adventurer_for_card: TDAdventurer = null
 var hovered_adventurer_for_card: TDAdventurer = null
 var last_pointer_screen_position: Vector2 = Vector2.ZERO
-var speed_multiplier: int = 1
 
 func _ready() -> void:
 	castle_hp = starting_castle_hp
@@ -86,9 +82,6 @@ func _ready() -> void:
 
 	start_button.pressed.connect(_on_start_button_pressed)
 	auto_call_button.pressed.connect(_on_auto_call_button_pressed)
-	speed_1x_button.pressed.connect(func() -> void: _set_battle_speed(1))
-	speed_2x_button.pressed.connect(func() -> void: _set_battle_speed(2))
-	speed_3x_button.pressed.connect(func() -> void: _set_battle_speed(3))
 	return_button.visible = false
 	return_button.pressed.connect(_on_return_button_pressed)
 
@@ -98,7 +91,6 @@ func _ready() -> void:
 	hud.add_child(unit_info_card)
 
 	_update_wave_controls()
-	_update_speed_buttons()
 	_update_hud()
 
 ## Builds one placement button per adventurer in the active roster (falls back to a default
@@ -221,22 +213,6 @@ func _update_wave_controls() -> void:
 	var can_toggle_auto := not battle_over and wave_active and current_wave_index < day_data.waves.size() - 1
 	auto_call_button.disabled = not can_toggle_auto
 	auto_call_button.text = "Auto-Call: ON" if auto_call_next else "Auto-Call: OFF"
-
-func _set_battle_speed(multiplier: int) -> void:
-	speed_multiplier = clampi(multiplier, 1, 3)
-	step_timer.wait_time = step_interval / float(speed_multiplier)
-	if not step_timer.is_stopped():
-		step_timer.start()
-	_update_speed_buttons()
-	_update_hud()
-
-func _update_speed_buttons() -> void:
-	speed_1x_button.disabled = speed_multiplier == 1
-	speed_2x_button.disabled = speed_multiplier == 2
-	speed_3x_button.disabled = speed_multiplier == 3
-	speed_1x_button.text = "1x" if speed_multiplier != 1 else "1x ✓"
-	speed_2x_button.text = "2x" if speed_multiplier != 2 else "2x ✓"
-	speed_3x_button.text = "3x" if speed_multiplier != 3 else "3x ✓"
 
 func _select_adventurer(data: AdventurerData) -> void:
 	if not placement_open:
@@ -766,7 +742,7 @@ func _update_hud() -> void:
 	wave_label.text = "Day %d — Wave %d/%d — %s — Enemies left to spawn: %d" % [
 		day_data.day_index, wave_display, day_data.waves.size(), mode_text, total_enemies_remaining_to_spawn
 	]
-	wave_state_label.text = "Wave State: %s | Speed: %dx" % [_wave_state_text(), speed_multiplier]
+	wave_state_label.text = "Wave State: %s" % _wave_state_text()
 	_refresh_unit_info()
 
 func _wave_state_text() -> String:

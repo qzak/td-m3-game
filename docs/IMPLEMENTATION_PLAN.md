@@ -27,7 +27,6 @@ Detailed behavior lives in system docs:
 | 10. Top resource bar HUD 2.0 | ✅ Done | `TopResourceBar` replaces compact HUD in Castle/TD/Mine. |
 | 11. Castle focus mode + War Room | ✅ Done | Building focus mode and day selection migration complete. |
 | 12. Visual/UX continuity after HUD/focus changes | ✅ Done | Layout continuity and docs updates applied. |
-| 13. TD battle speed controls (1x/2x/3x) | ✅ Done | Speed buttons now scale move/attack turn cadence. |
 
 ### Recent completions (important for future agents)
 

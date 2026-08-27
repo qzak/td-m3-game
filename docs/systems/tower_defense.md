@@ -109,8 +109,6 @@ The timer isn't running continuously for the whole Day, though — see below.
     a wave is already spawning.
   - `Auto-Call: ON/OFF` (secondary toggle) arms/disarms automatic calling of the next wave once
     the current one finishes spawning.
-  - `1x`, `2x`, `3x` speed buttons change `step_timer.wait_time` to
-    `step_interval / speed_multiplier`, accelerating both move and attack turns.
   - This removes the old single-button mode-switch ambiguity while keeping the same pacing logic
     (`auto_call_next` still controls automatic chaining, waves never overlap).
 - **The step timer pauses whenever the field is clear and no wave is actively spawning**
@@ -123,8 +121,7 @@ The timer isn't running continuously for the whole Day, though — see below.
   (4-step spacing) to demonstrate the path-blocking behavior. `difficulty_scalar = 1.0`.
 - The HUD's `WaveLabel` now shows
   `Day X — Wave Y/Z — Manual call|Auto-call armed — Enemies left to spawn: N`, and a dedicated
-  `WaveStateLabel` reports explicit state (`Prep`, `Spawning wave N`, `Breather`, `Final wave cleared`)
-  plus the active speed multiplier (`Speed: 1x|2x|3x`).
+  `WaveStateLabel` reports explicit state (`Prep`, `Spawning wave N`, `Breather`, `Final wave cleared`).
 - `EventBus.day_started/day_won/day_lost` now emit `day_data.day_index` instead of a hardcoded 0.
 - [data/waves/day_2.tres](../../data/waves/day_2.tres) is a harder second Day (`difficulty_scalar =
   1.3`, `completion_reward = 200`): goblins, then Goblin Riders, then Goblin Hexers, then Large

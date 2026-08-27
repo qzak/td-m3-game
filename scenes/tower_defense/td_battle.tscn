@@ -83,15 +83,6 @@ text = "Call Wave 1"
 [node name="AutoCallButton" type="Button" parent="UI/HUD/Controls"]
 text = "Auto-Call: OFF"
 
-[node name="Speed1xButton" type="Button" parent="UI/HUD/Controls"]
-text = "1x ✓"
-
-[node name="Speed2xButton" type="Button" parent="UI/HUD/Controls"]
-text = "2x"
-
-[node name="Speed3xButton" type="Button" parent="UI/HUD/Controls"]
-text = "3x"
-
 [node name="ReturnToCastleButton" type="Button" parent="UI/HUD/Controls"]
 text = "Return to Castle"
 
