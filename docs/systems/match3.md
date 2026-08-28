@@ -38,16 +38,18 @@ adapting to safe-area insets and viewport size.
 - Once all five top rows are empty, the `Descend` button becomes available. A persistent HUD line
   now shows readiness progress (`Descend ready: X/5 top rows clear`) so players can see how close
   they are before it unlocks. Pressing `Descend` shifts the lower five rows to the top and
-  generates five new rows at the bottom. This increases depth by one and emits
+  generates five new rows at the bottom using spawn-safe placement (no immediate horizontal/vertical
+  3+ runs at the placement cell). This increases depth by one and emits
   `EventBus.mine_depth_changed`; descent is never automatic.
 - Copper is available at depth 0, iron at depth 5, and gold at depth 15. Matching a valuable tile
   adds its material directly through `GameState.add_material()` and emits
   `EventBus.mine_match_resolved`.
 - Garbage tiles are dirt, stone, and clay. They have no material reward and primarily clear space.
 - Gate-aware blocker rules:
-  - **Hardness Gate A** (`hard_stone`): survives normal match clears while gate is active; must be removed with Dynamite.
-  - **Hardness Gate B** (`rooted_stone`): cannot be moved by normal swap/move rules until Shovel is crafted.
-  - **Magic Barrier Gate**: matching/moving below the barrier row is blocked until the trinket is attuned.
+  - **Hardness Gate A** (`hard_stone`): active from the first cleared depth layer; survives normal match clears while active and must be removed with Dynamite.
+  - **Hardness Gate B** (`rooted_stone`): arms once the mine reaches depth 5 (`GameState.HARDNESS_B_DEPTH`); cannot be moved by normal swap/move rules until Shovel is crafted.
+  - **Magic Barrier Gate**: arms once the mine reaches depth 15 (`GameState.MAGIC_BARRIER_DEPTH`); matching/moving below the barrier row is blocked until the trinket is attuned.
+  - Gates no longer chain instantly off each other's resolution — `GameState.check_depth_gates(depth)` arms each gate independently by depth, so resolving an earlier gate (e.g. blasting hard_stone) does not immediately spawn the next gate's blocker tile on the same layer.
 - Descend is additionally progression-gated by active unresolved mine gates via `GameState.gate_state(...)`.
 
 ## Animation & Input Locking

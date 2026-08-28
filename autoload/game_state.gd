@@ -58,6 +58,8 @@ var _total_known_days_cache: int = -1  # -1 = not yet computed
 const GATE_INTRODUCED := "introduced"
 const GATE_ACTIVE := "active"
 const GATE_RESOLVED := "resolved"
+const HARDNESS_B_DEPTH := 5
+const MAGIC_BARRIER_DEPTH := 15
 const WORKSHOP_RECIPES := {
 	"dynamite": {
 		"display_name": "Dynamite",
@@ -135,11 +137,15 @@ func set_gate_state(gate_id: String, new_state: String) -> void:
 	if gate_states[gate_id] == new_state:
 		return
 	gate_states[gate_id] = new_state
-	if gate_id == "hardness_a" and new_state == GATE_RESOLVED and gate_state("hardness_b") != GATE_RESOLVED:
-		gate_states["hardness_b"] = GATE_ACTIVE
-	if gate_id == "hardness_b" and new_state == GATE_RESOLVED and gate_state("magic_barrier") != GATE_RESOLVED:
-		gate_states["magic_barrier"] = GATE_ACTIVE
 	_emit_progression_changed("gate-state-%s-%s" % [gate_id, new_state])
+
+## Arms hardness_b/magic_barrier once the mine reaches their trigger depth, instead of instantly
+## chaining off the previous gate's resolution.
+func check_depth_gates(current_depth: int) -> void:
+	if current_depth >= HARDNESS_B_DEPTH and gate_state("hardness_b") == GATE_INTRODUCED:
+		set_gate_state("hardness_b", GATE_ACTIVE)
+	if current_depth >= MAGIC_BARRIER_DEPTH and gate_state("magic_barrier") == GATE_INTRODUCED:
+		set_gate_state("magic_barrier", GATE_ACTIVE)
 
 func consume_dynamite() -> bool:
 	if dynamite_count <= 0:

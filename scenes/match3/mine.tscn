@@ -61,6 +61,7 @@ size_flags_vertical = 3
 text = "Return to Castle"
 
 [node name="BoardSpacer" type="Control" parent="UI/HUD/SafeArea/Content"]
+mouse_filter = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 

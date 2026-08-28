@@ -33,7 +33,7 @@ func create_new_board() -> void:
 	for y in range(HEIGHT):
 		var row: Array = []
 		for x in range(WIDTH):
-			row.append(_new_initial_tile(Vector2i(x, y)))
+			row.append(_new_spawn_safe_tile(Vector2i(x, y)))
 		tiles.append(row)
 	board_changed.emit()
 
@@ -233,7 +233,7 @@ func descend() -> bool:
 	var spawned_tiles: Array = []
 	for y in range(HEIGHT - DESCENT_ROWS, HEIGHT):
 		for x in range(WIDTH):
-			tiles[y][x] = _new_random_tile(Vector2i(x, y))
+			tiles[y][x] = _new_spawn_safe_tile(Vector2i(x, y))
 			if tiles[y][x] != null:
 				spawned_tiles.append({
 					"from": Vector2i(x, y + DESCENT_ROWS),
@@ -251,30 +251,25 @@ func descend() -> bool:
 	board_changed.emit()
 	return true
 
-func _new_random_tile(_cell: Vector2i):
+func _spawn_candidates_for_depth() -> Array:
 	var candidates: Array = []
 	for definition in tile_definitions.values():
 		if definition.depth_required <= depth:
 			candidates.append(definition)
-	if candidates.is_empty():
-		return null
-	return candidates[random.randi_range(0, candidates.size() - 1)].duplicate()
+	return candidates
 
-func _new_initial_tile(cell: Vector2i):
-	var candidates: Array = []
-	for definition in tile_definitions.values():
-		if definition.depth_required <= depth:
-			candidates.append(definition)
+func _new_spawn_safe_tile(cell: Vector2i):
+	var candidates := _spawn_candidates_for_depth()
 	if candidates.is_empty():
 		return null
-	var shuffled: Array = candidates.duplicate()
-	shuffled.shuffle()
-	for definition in shuffled:
-		if not _would_create_initial_match(cell, str(definition.id)):
+	var start_index := random.randi_range(0, candidates.size() - 1)
+	for offset in range(candidates.size()):
+		var definition = candidates[(start_index + offset) % candidates.size()]
+		if not _would_create_spawn_match(cell, str(definition.id)):
 			return definition.duplicate()
-	return shuffled[0].duplicate()
+	return candidates[start_index].duplicate()
 
-func _would_create_initial_match(cell: Vector2i, tile_id: String) -> bool:
+func _would_create_spawn_match(cell: Vector2i, tile_id: String) -> bool:
 	if cell.x >= 2:
 		var left_one = tiles[cell.y][cell.x - 1]
 		var left_two = tiles[cell.y][cell.x - 2]

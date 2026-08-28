@@ -81,6 +81,7 @@ func _ready() -> void:
 	board.configure(definitions, GameState.mine_depth)
 	if GameState.mine_board_state.is_empty() or not board.load_state(GameState.mine_board_state, GameState.mine_depth):
 		board.create_new_board()
+	GameState.check_depth_gates(GameState.mine_depth)
 	board.match_resolved.connect(_on_match_resolved)
 	board.depth_advanced.connect(_on_depth_advanced)
 	board.board_changed.connect(_on_board_changed)
@@ -254,6 +255,7 @@ func _on_depth_advanced(new_depth: int) -> void:
 	EventBus.mine_depth_changed.emit(new_depth)
 	if new_depth >= 1:
 		GameState.mark_first_depth_cleared()
+	GameState.check_depth_gates(new_depth)
 	post_animation_status = "New layer opened"
 	if not is_animating:
 		_set_status(post_animation_status)

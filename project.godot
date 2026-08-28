@@ -20,6 +20,7 @@ EventBus="*res://autoload/event_bus.gd"
 GameState="*res://autoload/game_state.gd"
 SaveManager="*res://autoload/save_manager.gd"
 DisplayLayout="*res://autoload/display_layout.gd"
+DebugMenu="*res://autoload/debug_menu.gd"
 
 [display]
 
