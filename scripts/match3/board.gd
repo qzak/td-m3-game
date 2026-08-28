@@ -30,11 +30,15 @@ func configure(definitions: Array, starting_depth: int = 0) -> void:
 
 func create_new_board() -> void:
 	tiles.clear()
+	# Preallocate all rows first so spawn-safety checks can read already-placed
+	# neighbors in the same row from `tiles` while the board is still filling.
 	for y in range(HEIGHT):
 		var row: Array = []
-		for x in range(WIDTH):
-			row.append(_new_spawn_safe_tile(Vector2i(x, y)))
+		row.resize(WIDTH)
 		tiles.append(row)
+	for y in range(HEIGHT):
+		for x in range(WIDTH):
+			tiles[y][x] = _new_spawn_safe_tile(Vector2i(x, y))
 	board_changed.emit()
 
 func load_state(state: Array, saved_depth: int) -> bool:
