@@ -76,8 +76,8 @@ If a feature ships, remove it from this file and document as-built behavior in:
 - [ ] **UX-002 — High-signal feedback pass**
   - Improve feedback for descend availability, wave transitions, and day results.
 
-- [ ] **UX-003 — 1280x720 overlay/input safety pass**
-  - Re-check and fix any HUD overlay/input-blocking risks at target resolution.
+- [ ] **UX-003 — more focused per-screen HUD**
+  - Update HUD in TD battle screen. Instead of resources, show waves, upcoming enemy counts and types, resources dropped by enemies.
 
 - [ ] **AV-001 — Missing SFX hooks**
   - Add missing SFX triggers for combat, mine events, and day outcomes.
