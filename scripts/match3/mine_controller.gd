@@ -131,10 +131,12 @@ func _apply_layout() -> void:
 	var board_area_bottom := viewport_size.y - safe_bottom - SAFE_BOTTOM_PADDING
 	var available_width := maxf(BOARD_WIDTH * 24.0, board_area_right - board_area_left)
 	var available_height := maxf(BOARD_HEIGHT * 24.0, board_area_bottom - board_area_top)
-	var resolved_cell_size := floor(minf(available_width / BOARD_WIDTH, available_height / BOARD_HEIGHT))
+	var resolved_cell_size: float = floorf(minf(available_width / BOARD_WIDTH, available_height / BOARD_HEIGHT))
 	cell_size = clampf(resolved_cell_size, 24.0, 72.0)
 	var board_pixel_size := Vector2(BOARD_WIDTH * cell_size, BOARD_HEIGHT * cell_size)
 	board_origin = Vector2(
+
+		
 		board_area_left + maxf(0.0, (available_width - board_pixel_size.x) * 0.5),
 		board_area_top + maxf(0.0, (available_height - board_pixel_size.y) * 0.5)
 	)

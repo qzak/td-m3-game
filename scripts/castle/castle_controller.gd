@@ -11,6 +11,7 @@ class_name CastleController
 @onready var towers_panel: TowersPanel = $UI/HUD/SafeArea/MainColumns/PanelHost/TowersPanel
 @onready var war_room_panel: Control = $UI/HUD/SafeArea/MainColumns/PanelHost/WarRoomPanel
 @onready var workshop_panel: Control = $UI/HUD/SafeArea/MainColumns/PanelHost/WorkshopPanel
+@onready var library_panel: Control = $UI/HUD/SafeArea/MainColumns/PanelHost/LibraryPanel
 @onready var tavern_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/TavernButton
 @onready var quarters_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/QuartersButton
 @onready var smelter_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/SmelterButton
@@ -20,6 +21,7 @@ class_name CastleController
 @onready var towers_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/TowersButton
 @onready var war_room_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/WarRoomButton
 @onready var workshop_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/WorkshopButton
+@onready var library_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/LibraryButton
 @onready var mine_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/MineButton
 @onready var controls: GridContainer = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls
 @onready var close_panel_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/ClosePanelButton
@@ -40,7 +42,7 @@ func _ready() -> void:
 	_apply_safe_area_layout()
 	DisplayLayout.viewport_size_changed.connect(_on_viewport_size_changed)
 
-	all_panels = [tavern_panel, quarters_panel, smelter_panel, weapon_smith_panel, armour_smith_panel, armoury_panel, towers_panel, war_room_panel, workshop_panel]
+	all_panels = [tavern_panel, quarters_panel, smelter_panel, weapon_smith_panel, armour_smith_panel, armoury_panel, towers_panel, war_room_panel, workshop_panel, library_panel]
 
 	tavern_button.pressed.connect(func(): _show_panel(tavern_panel))
 	quarters_button.pressed.connect(func(): _show_panel(quarters_panel))
@@ -51,6 +53,7 @@ func _ready() -> void:
 	towers_button.pressed.connect(func(): _show_panel(towers_panel))
 	war_room_button.pressed.connect(func(): _show_panel(war_room_panel))
 	workshop_button.pressed.connect(func(): _show_panel(workshop_panel))
+	library_button.pressed.connect(func(): _show_panel(library_panel))
 	mine_button.pressed.connect(_on_mine_pressed)
 	close_panel_button.pressed.connect(func(): _show_panel(null))
 	war_room_panel.day_start_requested.connect(_on_start_day_pressed)
@@ -120,6 +123,8 @@ func _refresh_progression_ui() -> void:
 		workshop_button.text = "Workshop"
 	else:
 		workshop_button.text = "Workshop (Locked)"
+	library_button.text = "Library"
+	library_button.disabled = false
 	if GameState.can_enter_mine():
 		mine_button.text = "Enter Mine"
 		mine_button.disabled = false

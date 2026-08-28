@@ -33,12 +33,8 @@ func create_new_board() -> void:
 	for y in range(HEIGHT):
 		var row: Array = []
 		for x in range(WIDTH):
-			row.append(_new_random_tile(Vector2i(x, y)))
+			row.append(_new_initial_tile(Vector2i(x, y)))
 		tiles.append(row)
-	while not solver.find_matches(tiles, WIDTH, HEIGHT).is_empty():
-		for y in range(HEIGHT):
-			for x in range(WIDTH):
-				tiles[y][x] = _new_random_tile(Vector2i(x, y))
 	board_changed.emit()
 
 func load_state(state: Array, saved_depth: int) -> bool:
@@ -263,6 +259,33 @@ func _new_random_tile(_cell: Vector2i):
 	if candidates.is_empty():
 		return null
 	return candidates[random.randi_range(0, candidates.size() - 1)].duplicate()
+
+func _new_initial_tile(cell: Vector2i):
+	var candidates: Array = []
+	for definition in tile_definitions.values():
+		if definition.depth_required <= depth:
+			candidates.append(definition)
+	if candidates.is_empty():
+		return null
+	var shuffled: Array = candidates.duplicate()
+	shuffled.shuffle()
+	for definition in shuffled:
+		if not _would_create_initial_match(cell, str(definition.id)):
+			return definition.duplicate()
+	return shuffled[0].duplicate()
+
+func _would_create_initial_match(cell: Vector2i, tile_id: String) -> bool:
+	if cell.x >= 2:
+		var left_one = tiles[cell.y][cell.x - 1]
+		var left_two = tiles[cell.y][cell.x - 2]
+		if left_one != null and left_two != null and str(left_one.id) == tile_id and str(left_two.id) == tile_id:
+			return true
+	if cell.y >= 2:
+		var up_one = tiles[cell.y - 1][cell.x]
+		var up_two = tiles[cell.y - 2][cell.x]
+		if up_one != null and up_two != null and str(up_one.id) == tile_id and str(up_two.id) == tile_id:
+			return true
+	return false
 
 func _is_valid_cell(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.x < WIDTH and cell.y >= 0 and cell.y < HEIGHT

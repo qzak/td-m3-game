@@ -2,10 +2,13 @@ extends Control
 class_name TopResourceBar
 
 const ENTRY_DEFS: Array[Dictionary] = [
+	{"id": "battle_wave", "label": "Wave", "swatch": Color("7ea7ff"), "contexts": ["battle"]},
+	{"id": "battle_upcoming", "label": "Upcoming", "swatch": Color("c58fff"), "contexts": ["battle"]},
+	{"id": "battle_drops", "label": "Drops", "swatch": Color("72be7f"), "contexts": ["battle"]},
 	{"id": "currency", "label": "Coins", "swatch": Color("d7b34d"), "contexts": ["castle", "mine", "smith", "battle"]},
-	{"id": "copper", "label": "Copper", "swatch": Color("c9794d"), "contexts": ["castle", "mine", "battle"]},
-	{"id": "iron", "label": "Iron", "swatch": Color("aeb8bd"), "contexts": ["castle", "mine", "battle"]},
-	{"id": "gold", "label": "Gold Ore", "swatch": Color("e6c34f"), "contexts": ["castle", "mine", "battle"]},
+	{"id": "copper", "label": "Copper", "swatch": Color("c9794d"), "contexts": ["castle", "mine", "smith"]},
+	{"id": "iron", "label": "Iron", "swatch": Color("aeb8bd"), "contexts": ["castle", "mine", "smith"]},
+	{"id": "gold", "label": "Gold Ore", "swatch": Color("e6c34f"), "contexts": ["castle", "mine", "smith"]},
 	{"id": "volatile_core", "label": "Volatile Core", "swatch": Color("c85a52"), "contexts": ["castle", "battle", "smith"]},
 	{"id": "refined_copper", "label": "Ref. Copper", "swatch": Color("a65f3b"), "contexts": ["castle", "smith"]},
 	{"id": "refined_iron", "label": "Ref. Iron", "swatch": Color("8e999f"), "contexts": ["castle", "smith"]},
@@ -21,9 +24,9 @@ const CONTEXT_TITLES := {
 
 const CONTEXT_ORDER := {
 	"castle": ["currency", "volatile_core", "refined_iron", "refined_copper", "refined_gold", "iron", "copper", "gold"],
-	"battle": ["currency", "volatile_core", "iron", "copper", "gold"],
-	"mine": ["currency", "gold", "iron", "copper"],
-	"smith": ["currency", "volatile_core", "refined_iron", "refined_copper", "refined_gold", "iron", "copper", "gold"],
+	"battle": ["battle_wave", "battle_upcoming", "battle_drops", "volatile_core", "currency"],
+	"mine": ["gold", "iron", "copper", "currency"],
+	"smith": ["refined_iron", "refined_copper", "refined_gold", "volatile_core", "currency", "iron", "copper", "gold"],
 }
 
 @onready var context_label: Label = $Panel/Margin/ContentRow/ContextLabel
@@ -31,6 +34,9 @@ const CONTEXT_ORDER := {
 
 var _context := "castle"
 var _chip_rows: Dictionary = {}
+var _battle_wave_summary: String = "Day 1 • Wave 1/1 • Spawn 0"
+var _battle_upcoming_summary: String = "Upcoming none"
+var _battle_drop_summary: String = "Drops none"
 
 func _ready() -> void:
 	_set_mouse_passthrough(self)
@@ -42,6 +48,15 @@ func _ready() -> void:
 
 func set_context(value: String) -> void:
 	_context = value
+	_refresh_visibility()
+
+func set_battle_summaries(wave_summary: String, upcoming_summary: String, drop_summary: String) -> void:
+	_battle_wave_summary = wave_summary
+	_battle_upcoming_summary = upcoming_summary
+	_battle_drop_summary = drop_summary
+	_refresh_chip_value("battle_wave")
+	_refresh_chip_value("battle_upcoming")
+	_refresh_chip_value("battle_drops")
 	_refresh_visibility()
 
 func _on_currency_changed(_new_amount: int) -> void:
@@ -88,9 +103,17 @@ func _refresh_chip_value(entry_id: String) -> void:
 		return
 	var chip_entry: Dictionary = _chip_rows[entry_id]
 	var label: Label = chip_entry["label"]
-	var display_name := _label_for(entry_id)
-	var value := GameState.currency if entry_id == "currency" else int(GameState.materials.get(entry_id, 0))
-	label.text = "%s: %d" % [display_name, value]
+	match entry_id:
+		"battle_wave":
+			label.text = _battle_wave_summary
+		"battle_upcoming":
+			label.text = _battle_upcoming_summary
+		"battle_drops":
+			label.text = _battle_drop_summary
+		_:
+			var display_name := _label_for(entry_id)
+			var value := GameState.currency if entry_id == "currency" else int(GameState.materials.get(entry_id, 0))
+			label.text = "%s: %d" % [display_name, value]
 
 func _refresh_visibility() -> void:
 	context_label.text = str(CONTEXT_TITLES.get(_context, _context.capitalize()))

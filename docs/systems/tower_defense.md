@@ -41,8 +41,10 @@ alongside code changes so it stays a reliable reference. See
 - **Important gotcha:** the `HUD` `Control` covers the whole viewport, so its `mouse_filter`
   must stay `IGNORE` (`2`) or it silently swallows clicks/hover/touch-drag meant for the grid. Buttons
   underneath keep their own `STOP` filter and still work normally.
-- Resource display is now provided by the shared full-width `TopResourceBar` (battle context), while
-  battle-specific labels (castle HP, wave state, selection/status) stay on the TD HUD.
+- Resource display is now split by signal:
+  - shared `TopResourceBar` in battle context carries tactical chips (`Wave`, `Upcoming`, `Drops`)
+    plus compact economy chips (`Volatile Core`, `Coins`),
+  - TD HUD keeps only battle-state/interaction context (`Castle HP`, wave state, selection, results).
 - TD HUD labels are now container-driven (`SafeArea/Layout/StatusColumn`) and safe-area-aware
   instead of fixed offsets; they stay anchored under the shared top bar across viewport sizes.
 - Project display now uses canonical cross-platform stretch settings
@@ -131,9 +133,14 @@ the TD battle step timer cadence (`StepTimer.wait_time`) and does not affect Cas
 - [data/waves/day_1.tres](../../data/waves/day_1.tres) is the current sample: goblins in
   waves 1-3 (5 @ 2-step spacing, 8 @ 2-step, 10 @ 1-step), then a 4th wave of 3 Large Goblins
   (4-step spacing) to demonstrate the path-blocking behavior. `difficulty_scalar = 1.0`.
-- The HUD's `WaveLabel` now shows
-  `Day X — Wave Y/Z — Manual call|Auto-call armed — Enemies left to spawn: N`, and a dedicated
-  `WaveStateLabel` reports explicit state (`Prep`, `Spawning wave N`, `Breather`, `Final wave cleared`).
+- Tactical preview now lives in top-bar battle chips:
+  - `Wave` chip: `Day X • Wave Y/Z • Spawn N`
+  - `Upcoming` chip: grouped enemy type/count summary from remaining wave data, including partially
+    spawned current-wave remainder.
+  - `Drops` chip: projected remaining drops (`drop_material_id`/`drop_amount`) with projected
+    coin bounty (`+Nc`) from remaining kills.
+  - `WaveStateLabel` remains on the side HUD for explicit phase/state (`Prep`, `Spawning wave N`,
+    `Breather`, `Final wave cleared`).
 - `EventBus.day_started/day_won/day_lost` now emit `day_data.day_index` instead of a hardcoded 0.
 - [data/waves/day_2.tres](../../data/waves/day_2.tres) is a harder second Day (`difficulty_scalar =
   1.3`, `completion_reward = 200`): goblins, then Goblin Riders, then Goblin Hexers, then Large
@@ -354,8 +361,8 @@ The Berserker still has the slowest charge (lowest `attack_regen`) among recruit
   - loss: failure reason (`Castle HP reached 0`).
 - `GameState.last_day_result` stores a compact day recap (win/loss, coin delta, completion bonus,
   unlock result) so Castle/War Room can show the most recent outcome.
-- The shared `TopResourceBar` mirrors `GameState.currency` and materials in real time via `EventBus`,
-  so coin/material gains are visible mid-battle, not just back in the Castle.
+- The shared `TopResourceBar` still mirrors live `EventBus` updates; battle context combines those
+  economy values with tactical wave/upcoming/drop chips so high-signal combat context stays at the top.
 - `GameState.currency` starts at `100` for a new save — enough to recruit the cheaper adventurers
   outright, but a full Day clear (or several kills) is needed to afford the Berserker (`250`).
 

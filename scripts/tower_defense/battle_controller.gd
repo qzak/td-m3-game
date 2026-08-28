@@ -18,7 +18,6 @@ const UNIT_INFO_CARD_SCRIPT := preload("res://scripts/ui/unit_info_card.gd")
 @onready var units_root: Node2D = $UnitsRoot
 @onready var step_timer: Timer = $StepTimer
 @onready var castle_hp_label: Label = $UI/HUD/SafeArea/Layout/StatusColumn/CastleHPLabel
-@onready var wave_label: Label = $UI/HUD/SafeArea/Layout/StatusColumn/WaveLabel
 @onready var wave_state_label: Label = $UI/HUD/SafeArea/Layout/StatusColumn/WaveStateLabel
 @onready var result_label: Label = $UI/HUD/SafeArea/Layout/StatusColumn/ResultLabel
 @onready var selected_label: Label = $UI/HUD/SafeArea/Layout/SelectedLabel
@@ -29,7 +28,7 @@ const UNIT_INFO_CARD_SCRIPT := preload("res://scripts/ui/unit_info_card.gd")
 @onready var speed_3x_button: Button = $UI/HUD/SafeArea/Layout/Controls/Speed3xButton
 @onready var return_button: Button = $UI/HUD/SafeArea/Layout/Controls/ReturnToCastleButton
 @onready var placement_buttons_container: Container = $UI/HUD/SafeArea/Layout/Controls/PlacementButtonsContainer
-@onready var top_resource_bar: Control = $UI/HUD/TopResourceBar
+@onready var top_resource_bar: TopResourceBar = $UI/HUD/TopResourceBar
 @onready var hud: Control = $UI/HUD
 @onready var safe_area: MarginContainer = $UI/HUD/SafeArea
 @onready var controls_row: HFlowContainer = $UI/HUD/SafeArea/Layout/Controls
@@ -864,11 +863,12 @@ func _check_end_conditions() -> void:
 func _update_hud() -> void:
 	castle_hp_label.text = "Castle HP: %d" % castle_hp
 	var wave_display := mini(current_wave_index + 1, day_data.waves.size())
-	var mode_text := "Auto-call armed" if auto_call_next else "Manual call"
-	wave_label.text = "Day %d — Wave %d/%d — %s — Enemies left to spawn: %d" % [
-		day_data.day_index, wave_display, day_data.waves.size(), mode_text, total_enemies_remaining_to_spawn
-	]
 	wave_state_label.text = "Wave State: %s" % _wave_state_text()
+	top_resource_bar.set_battle_summaries(
+		"Day %d • Wave %d/%d • Spawn %d" % [day_data.day_index, wave_display, day_data.waves.size(), total_enemies_remaining_to_spawn],
+		_build_upcoming_summary(),
+		_build_drop_projection_summary()
+	)
 	_refresh_unit_info()
 
 func _wave_state_text() -> String:
@@ -883,3 +883,96 @@ func _wave_state_text() -> String:
 			return "Final wave cleared"
 		return "Breather (placement open)"
 	return "Wave %d combat" % maxi(current_wave_index, 1)
+
+func _build_upcoming_summary() -> String:
+	var remaining_entries := _remaining_wave_entries()
+	if remaining_entries.is_empty():
+		return "Upcoming none"
+
+	var counts_by_enemy: Dictionary = {}
+	var enemy_order: Array[String] = []
+	var names_by_enemy: Dictionary = {}
+	for entry in remaining_entries:
+		var enemy: EnemyData = entry["enemy_data"]
+		var count: int = int(entry["count"])
+		if enemy == null or count <= 0:
+			continue
+		if not counts_by_enemy.has(enemy.id):
+			counts_by_enemy[enemy.id] = 0
+			enemy_order.append(enemy.id)
+			names_by_enemy[enemy.id] = enemy.display_name
+		counts_by_enemy[enemy.id] = int(counts_by_enemy[enemy.id]) + count
+
+	if enemy_order.is_empty():
+		return "Upcoming none"
+
+	var parts: Array[String] = []
+	var max_types_to_show := 2
+	for i in range(mini(enemy_order.size(), max_types_to_show)):
+		var enemy_id: String = enemy_order[i]
+		parts.append("%s x%d" % [names_by_enemy[enemy_id], int(counts_by_enemy[enemy_id])])
+	if enemy_order.size() > max_types_to_show:
+		parts.append("+%d more type(s)" % (enemy_order.size() - max_types_to_show))
+	return "Upcoming %s" % _join_parts(parts, " • ")
+
+func _build_drop_projection_summary() -> String:
+	var remaining_entries := _remaining_wave_entries()
+	if remaining_entries.is_empty():
+		return "Drops none • +0c"
+
+	var projected_bounty := 0
+	var drop_totals: Dictionary = {}
+	var drop_order: Array[String] = []
+	for entry in remaining_entries:
+		var enemy: EnemyData = entry["enemy_data"]
+		var count: int = int(entry["count"])
+		if enemy == null or count <= 0:
+			continue
+		projected_bounty += enemy.bounty * count
+		if enemy.drop_material_id.is_empty() or enemy.drop_amount <= 0:
+			continue
+		if not drop_totals.has(enemy.drop_material_id):
+			drop_totals[enemy.drop_material_id] = 0
+			drop_order.append(enemy.drop_material_id)
+		drop_totals[enemy.drop_material_id] = int(drop_totals[enemy.drop_material_id]) + (enemy.drop_amount * count)
+
+	var drop_parts: Array[String] = []
+	var max_drop_types_to_show := 2
+	for i in range(mini(drop_order.size(), max_drop_types_to_show)):
+		var material_id: String = drop_order[i]
+		drop_parts.append("%s x%d" % [_format_material_label(material_id), int(drop_totals[material_id])])
+	if drop_order.size() > max_drop_types_to_show:
+		drop_parts.append("+%d more type(s)" % (drop_order.size() - max_drop_types_to_show))
+
+	var drop_text := "none"
+	if not drop_parts.is_empty():
+		drop_text = _join_parts(drop_parts, " • ")
+	return "Drops %s • +%dc" % [drop_text, projected_bounty]
+
+func _remaining_wave_entries() -> Array:
+	var entries: Array = []
+	for i in range(current_wave_index, day_data.waves.size()):
+		var wave: WaveData = day_data.waves[i]
+		if wave == null or wave.enemy_data == null:
+			continue
+		var remaining_count := wave.count
+		if wave_active and i == current_wave_index:
+			remaining_count -= current_wave_spawned_count
+		if remaining_count <= 0:
+			continue
+		entries.append({
+			"enemy_data": wave.enemy_data,
+			"count": remaining_count
+		})
+	return entries
+
+func _format_material_label(material_id: String) -> String:
+	return material_id.replace("_", " ").capitalize()
+
+func _join_parts(parts: Array[String], separator: String) -> String:
+	if parts.is_empty():
+		return ""
+	var text := parts[0]
+	for i in range(1, parts.size()):
+		text += separator + parts[i]
+	return text

@@ -45,10 +45,6 @@ theme_override_constants/separation = 4
 [node name="CastleHPLabel" type="Label" parent="UI/HUD/SafeArea/Layout/StatusColumn"]
 text = "Castle HP: 10"
 
-[node name="WaveLabel" type="Label" parent="UI/HUD/SafeArea/Layout/StatusColumn"]
-autowrap_mode = 2
-text = "Day 1 — Wave 1/3 — Enemies left to spawn: 23"
-
 [node name="WaveStateLabel" type="Label" parent="UI/HUD/SafeArea/Layout/StatusColumn"]
 text = "Wave State: Prep"
 

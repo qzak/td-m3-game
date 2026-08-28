@@ -21,6 +21,7 @@ alongside code changes so it stays a reliable reference. See
 | [scenes/castle/buildings/towers.tscn](../../scenes/castle/buildings/towers.tscn) / [scripts/castle/towers_panel.gd](../../scripts/castle/towers_panel.gd) (`TowersPanel`) | Minimal panel — Towers has no other player-facing UI yet, just its upgrade row. |
 | [scenes/castle/buildings/war_room.tscn](../../scenes/castle/buildings/war_room.tscn) / [scripts/castle/war_room_controller.gd](../../scripts/castle/war_room_controller.gd) (`WarRoomController`) | Dedicated day-selection panel; emits day-start requests, preserves unlock/lock behavior, and surfaces the most recent day result summary. |
 | [scenes/castle/buildings/workshop.tscn](../../scenes/castle/buildings/workshop.tscn) / [scripts/castle/workshop_controller.gd](../../scripts/castle/workshop_controller.gd) (`WorkshopController`) | Progression-tool crafting panel (Dynamite, Shovel, Trinket attunement) tied to active mine gates and workshop unlock state. |
+| [scenes/castle/buildings/library.tscn](../../scenes/castle/buildings/library.tscn) / [scripts/castle/library_controller.gd](../../scripts/castle/library_controller.gd) (`LibraryController`) | Placeholder panel scaffold for future bestiary work; currently shows empty-state messaging plus the shared building upgrade row. |
 | [scenes/castle/buildings/building_upgrade_row.tscn](../../scenes/castle/buildings/building_upgrade_row.tscn) / [scripts/castle/building_upgrade_row.gd](../../scripts/castle/building_upgrade_row.gd) (`BuildingUpgradeRow`) | Reusable component embedded in every building panel: shows current/next level and cost, spends currency+materials via `GameState.upgrade_building()`. |
 | [data/buildings/*.tres](../../data/buildings/) | `BuildingData` resources (`max_level`, per-level currency/material costs, optional per-level capacity/timer/speed vectors) — one per building id, including `towers.tres` (combat stats still live in `towers_stats.tres`/`TowerData`). |
 | [data/items/*.tres](../../data/items/) | `ItemData` resources for the 6 craftable weapons/armour pieces (see Weapon/Armour Smith section below). |
@@ -31,7 +32,7 @@ alongside code changes so it stays a reliable reference. See
 
 - `castle.tscn` is the project's boot scene (`run/main_scene` in `project.godot`). `CastleController._ready()`
   calls `SaveManager.load_game()` immediately, then wires up all building buttons (Tavern, Quarters,
-  Smelter, Weapon Smith, Armour Smith, Armoury, Towers, War Room, Workshop) plus Enter Mine.
+  Smelter, Weapon Smith, Armour Smith, Armoury, Towers, War Room, Workshop, Library) plus Enter Mine.
 - Exactly one building panel is visible at a time — `_show_panel()` iterates `all_panels`, sets
   `visible = (p == panel)`, and calls `panel.refresh()` when available.
 - Entering any building now enables **focus mode**: the main building button grid hides, a dedicated
@@ -77,7 +78,7 @@ alongside code changes so it stays a reliable reference. See
 
 ## Building Upgrades
 
-- Every building (`tavern`, `quarters`, `smelter`, `weapon_smith`, `armour_smith`, `armoury`, `towers`, `workshop`)
+- Every building (`tavern`, `quarters`, `smelter`, `weapon_smith`, `armour_smith`, `armoury`, `towers`, `workshop`, `library`)
   has a `BuildingData` resource at `data/buildings/<id>.tres` (`max_level = 5`, 4-entry
   `upgrade_currency_costs`/`upgrade_material_costs` arrays — index 0 is the cost to go from level 1→2).
   `BuildingData` can also carry effect vectors consumed by Castle systems:
@@ -102,6 +103,9 @@ alongside code changes so it stays a reliable reference. See
   Towers show `towers_stats.tres` combat stat progression.
 - Towers has no other player-facing UI yet, so its panel (`TowersPanel`) is just a title label plus
   the shared upgrade row.
+- Library currently has no bestiary data binding yet; its panel intentionally remains a scaffold with
+  explicit "coming soon" messaging while still participating in normal Castle panel routing and upgrade
+  row refresh behavior.
 
 ## Tavern
 

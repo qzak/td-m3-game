@@ -13,6 +13,8 @@ adapting to safe-area insets and viewport size.
 - Draw-path perf pass (mobile-oriented): `MineController` now caches tile display-name lookups and
   reuses `Vector2i` keys for hidden-cell checks during animation, reducing per-frame allocations in
   its `_draw()` loop without changing board visuals/logic.
+- First-time mine board generation now uses a single-pass fill that avoids immediate horizontal/vertical
+  3-in-a-row during placement, replacing full-board reroll loops that could stall first entry.
 
 ## Files
 
@@ -75,6 +77,8 @@ adapting to safe-area insets and viewport size.
   larger minimum height on touch-capable devices.
 - Mine-specific HUD now focuses on depth/status/actions; shared resource counts moved to the
   full-width `TopResourceBar` at the top of the scene.
+- In mine context, `TopResourceBar` prioritizes ore scanning order (`Gold Ore`, `Iron`, `Copper`,
+  then `Coins`) so gathering targets stay front-loaded.
 - Idle/help status copy now repeatedly calls out the goal ("clear the top edge") to make descent
   requirements obvious without trial-and-error.
 - Mine HUD now also includes:

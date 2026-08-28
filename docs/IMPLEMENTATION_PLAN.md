@@ -48,10 +48,6 @@ If a feature ships, remove it from this file and document as-built behavior in:
 - [ ] **CASTLE-003 — Better unlock readability in panels**
   - Improve in-panel communication of what unlocks next.
 
-- [ ] **CASTLE-004 — Library building scaffold**
-  - Add Library building data and Castle panel routing.
-  - Add placeholder Library panel with empty-state messaging.
-
 - [ ] **CASTLE-005 — Bestiary encounter tracking**
   - Track enemy encountered events from TD.
   - Persist encountered enemy IDs in save-compatible state.
@@ -70,14 +66,8 @@ If a feature ships, remove it from this file and document as-built behavior in:
 
 ## UX / Presentation
 
-- [ ] **UX-001 — Top resource bar context refinement**
-  - Refine emphasis/order for higher-signal context display.
-
 - [ ] **UX-002 — High-signal feedback pass**
   - Improve feedback for descend availability, wave transitions, and day results.
-
-- [ ] **UX-003 — more focused per-screen HUD**
-  - Update HUD in TD battle screen. Instead of resources, show waves, upcoming enemy counts and types, resources dropped by enemies.
 
 - [ ] **AV-001 — Missing SFX hooks**
   - Add missing SFX triggers for combat, mine events, and day outcomes.

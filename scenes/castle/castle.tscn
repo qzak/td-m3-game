@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/castle/castle_controller.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/castle/buildings/tavern.tscn" id="2"]
@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/top_resource_bar.tscn" id="9"]
 [ext_resource type="PackedScene" path="res://scenes/castle/buildings/war_room.tscn" id="10"]
 [ext_resource type="PackedScene" path="res://scenes/castle/buildings/workshop.tscn" id="11"]
+[ext_resource type="PackedScene" path="res://scenes/castle/buildings/library.tscn" id="12"]
 
 [node name="Castle" type="Node2D"]
 script = ExtResource("1")
@@ -63,6 +64,9 @@ text = "Towers"
 
 [node name="WarRoomButton" type="Button" parent="UI/HUD/SafeArea/MainColumns/Sidebar/Controls"]
 text = "War Room"
+
+[node name="LibraryButton" type="Button" parent="UI/HUD/SafeArea/MainColumns/Sidebar/Controls"]
+text = "Library"
 
 [node name="MineButton" type="Button" parent="UI/HUD/SafeArea/MainColumns/Sidebar/Controls"]
 text = "Enter Mine"
@@ -119,6 +123,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="WorkshopPanel" parent="UI/HUD/SafeArea/MainColumns/PanelHost" instance=ExtResource("11")]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="LibraryPanel" parent="UI/HUD/SafeArea/MainColumns/PanelHost" instance=ExtResource("12")]
 anchor_right = 1.0
 anchor_bottom = 1.0
 

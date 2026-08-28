@@ -22,6 +22,7 @@ var building_levels: Dictionary = {
 	"quarters": 1,
 	"towers": 1,
 	"workshop": 1,
+	"library": 1,
 }
 
 var tavern_roster_ids: Array = []
