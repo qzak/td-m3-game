@@ -79,8 +79,6 @@ If a feature ships, remove it from this file and document as-built behavior in:
 - [ ] **UX-003 — 1280x720 overlay/input safety pass**
   - Re-check and fix any HUD overlay/input-blocking risks at target resolution.
 
-## Cross-Platform (PC + Mobile)
-
 - [ ] **AV-001 — Missing SFX hooks**
   - Add missing SFX triggers for combat, mine events, and day outcomes.
 
