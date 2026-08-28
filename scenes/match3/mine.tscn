@@ -8,59 +8,60 @@ script = ExtResource("1")
 
 [node name="UI" type="CanvasLayer" parent="."]
 
-[node name="TitleLabel" type="Label" parent="UI"]
-offset_left = 32.0
-offset_top = 66.0
+[node name="HUD" type="Control" parent="UI"]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="SafeArea" type="MarginContainer" parent="UI/HUD"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Content" type="HBoxContainer" parent="UI/HUD/SafeArea"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/separation = 24
+
+[node name="LeftPanel" type="VBoxContainer" parent="UI/HUD/SafeArea/Content"]
+custom_minimum_size = Vector2(280, 0)
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="UI/HUD/SafeArea/Content/LeftPanel"]
 text = "THE MINE"
 theme_override_font_sizes/font_size = 28
 
-[node name="DepthLabel" type="Label" parent="UI"]
-offset_left = 32.0
-offset_top = 108.0
+[node name="DepthLabel" type="Label" parent="UI/HUD/SafeArea/Content/LeftPanel"]
 text = "Mine depth: 0"
 theme_override_font_sizes/font_size = 20
 
-[node name="StatusLabel" type="Label" parent="UI"]
-offset_left = 32.0
-offset_top = 146.0
+[node name="StatusLabel" type="Label" parent="UI/HUD/SafeArea/Content/LeftPanel"]
 text = "Select a tile"
 
-[node name="ObjectiveLabel" type="Label" parent="UI"]
-offset_left = 32.0
-offset_top = 166.0
-offset_right = 320.0
-offset_bottom = 228.0
+[node name="ObjectiveLabel" type="Label" parent="UI/HUD/SafeArea/Content/LeftPanel"]
 autowrap_mode = 2
 text = "Objective:"
 
-[node name="DescendButton" type="Button" parent="UI"]
-offset_left = 32.0
-offset_top = 240.0
-offset_right = 190.0
-offset_bottom = 284.0
+[node name="DescendButton" type="Button" parent="UI/HUD/SafeArea/Content/LeftPanel"]
 text = "Descend"
 disabled = true
 
-[node name="DynamiteButton" type="Button" parent="UI"]
-offset_left = 32.0
-offset_top = 292.0
-offset_right = 240.0
-offset_bottom = 336.0
+[node name="DynamiteButton" type="Button" parent="UI/HUD/SafeArea/Content/LeftPanel"]
 text = "Use Dynamite (0)"
 disabled = true
 
-[node name="DescendProgressLabel" type="Label" parent="UI"]
-offset_left = 32.0
-offset_top = 344.0
-offset_right = 304.0
-offset_bottom = 369.0
+[node name="DescendProgressLabel" type="Label" parent="UI/HUD/SafeArea/Content/LeftPanel"]
+autowrap_mode = 2
 text = "Descend ready: 0/5 top rows clear"
 
-[node name="BackButton" type="Button" parent="UI"]
-offset_left = 32.0
-offset_top = 642.0
-offset_right = 190.0
-offset_bottom = 686.0
+[node name="PanelSpacer" type="Control" parent="UI/HUD/SafeArea/Content/LeftPanel"]
+size_flags_vertical = 3
+
+[node name="BackButton" type="Button" parent="UI/HUD/SafeArea/Content/LeftPanel"]
 text = "Return to Castle"
 
-[node name="TopResourceBar" parent="UI" instance=ExtResource("2")]
+[node name="BoardSpacer" type="Control" parent="UI/HUD/SafeArea/Content"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="TopResourceBar" parent="UI/HUD" instance=ExtResource("2")]

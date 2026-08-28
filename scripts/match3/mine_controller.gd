@@ -10,8 +10,15 @@ const CLEAR_ANIMATION_TIME := 0.18
 const GRAVITY_ANIMATION_TIME := 0.22
 const DESCEND_ANIMATION_TIME := 0.3
 
-const BOARD_ORIGIN := Vector2(360, 72)
-const CELL_SIZE := 56.0
+const DEFAULT_CELL_SIZE := 56.0
+const TOP_BAR_HEIGHT := 56.0
+const TOP_GAP := 12.0
+const SAFE_SIDE_PADDING := 16.0
+const SAFE_BOTTOM_PADDING := 16.0
+const BOARD_GAP := 24.0
+const TOUCH_EDGE_HIT_SLOP_RATIO := 0.35
+const TOUCH_TARGET_MIN_HEIGHT := 56.0
+const TOUCH_DRAG_TARGET_COLOR := Color("f3dc8a")
 const TILE_COLORS := {
 	"dirt": Color("8f684b"),
 	"stone": Color("65717a"),
@@ -29,17 +36,23 @@ class AnimatedTile extends RefCounted:
 	var alpha: float = 1.0
 	var scale: float = 1.0
 
-@onready var depth_label: Label = $UI/DepthLabel
-@onready var status_label: Label = $UI/StatusLabel
-@onready var objective_label: Label = $UI/ObjectiveLabel
-@onready var back_button: Button = $UI/BackButton
-@onready var descend_button: Button = $UI/DescendButton
-@onready var descend_progress_label: Label = $UI/DescendProgressLabel
-@onready var dynamite_button: Button = $UI/DynamiteButton
-@onready var top_resource_bar: Control = $UI/TopResourceBar
+@onready var depth_label: Label = $UI/HUD/SafeArea/Content/LeftPanel/DepthLabel
+@onready var status_label: Label = $UI/HUD/SafeArea/Content/LeftPanel/StatusLabel
+@onready var objective_label: Label = $UI/HUD/SafeArea/Content/LeftPanel/ObjectiveLabel
+@onready var back_button: Button = $UI/HUD/SafeArea/Content/LeftPanel/BackButton
+@onready var descend_button: Button = $UI/HUD/SafeArea/Content/LeftPanel/DescendButton
+@onready var descend_progress_label: Label = $UI/HUD/SafeArea/Content/LeftPanel/DescendProgressLabel
+@onready var dynamite_button: Button = $UI/HUD/SafeArea/Content/LeftPanel/DynamiteButton
+@onready var top_resource_bar: Control = $UI/HUD/TopResourceBar
+@onready var safe_area: MarginContainer = $UI/HUD/SafeArea
+@onready var left_panel: VBoxContainer = $UI/HUD/SafeArea/Content/LeftPanel
 
 var board: MineBoard
+var board_origin := Vector2.ZERO
+var cell_size := DEFAULT_CELL_SIZE
 var selected_cell := Vector2i(-1, -1)
+var touch_drag_active := false
+var touch_drag_target_cell := Vector2i(-1, -1)
 var is_animating := false
 var animation_queue: Array = []
 var animation_tiles: Array = []
@@ -47,6 +60,8 @@ var hidden_cells: Dictionary = {}
 var visual_tile_ids: Array = []
 var post_animation_status := ""
 var dynamite_targeting := false
+var tile_display_names: Dictionary = {}
+var board_font: Font
 var definitions: Array = [
 	preload("res://data/tiles/dirt.tres"),
 	preload("res://data/tiles/stone.tres"),
@@ -61,6 +76,8 @@ var definitions: Array = [
 func _ready() -> void:
 	board = BOARD_SCRIPT.new()
 	add_child(board)
+	_apply_layout()
+	DisplayLayout.viewport_size_changed.connect(_on_viewport_size_changed)
 	board.configure(definitions, GameState.mine_depth)
 	if GameState.mine_board_state.is_empty() or not board.load_state(GameState.mine_board_state, GameState.mine_depth):
 		board.create_new_board()
@@ -72,11 +89,66 @@ func _ready() -> void:
 	back_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/castle/castle.tscn"))
 	descend_button.pressed.connect(_on_descend_pressed)
 	dynamite_button.pressed.connect(_on_dynamite_pressed)
+	_apply_touch_target_sizes()
+	_cache_tile_display_names()
+	board_font = ThemeDB.fallback_font
 	EventBus.progression_changed.connect(func(_reason): _update_hud())
 	top_resource_bar.set_context("mine")
 	_update_hud()
 	set_process(true)
 	queue_redraw()
+
+
+func _on_viewport_size_changed(_viewport_size: Vector2) -> void:
+	_apply_layout()
+	queue_redraw()
+
+
+func _apply_layout() -> void:
+	var viewport_size := DisplayLayout.current_viewport_size()
+	var margins: Dictionary = DisplayLayout.safe_area_margins()
+	var safe_left: float = float(margins.get("left", 0.0))
+	var safe_top: float = float(margins.get("top", 0.0))
+	var safe_right: float = float(margins.get("right", 0.0))
+	var safe_bottom: float = float(margins.get("bottom", 0.0))
+
+	top_resource_bar.offset_left = safe_left
+	top_resource_bar.offset_top = safe_top
+	top_resource_bar.offset_right = -safe_right
+	top_resource_bar.offset_bottom = safe_top + TOP_BAR_HEIGHT
+
+	safe_area.offset_left = safe_left + SAFE_SIDE_PADDING
+	safe_area.offset_top = safe_top + TOP_BAR_HEIGHT + TOP_GAP
+	safe_area.offset_right = -(safe_right + SAFE_SIDE_PADDING)
+	safe_area.offset_bottom = -(safe_bottom + SAFE_BOTTOM_PADDING)
+
+	var left_panel_width := clampf(viewport_size.x * 0.25, 248.0, 360.0)
+	left_panel.custom_minimum_size.x = left_panel_width
+
+	var board_area_left := safe_left + SAFE_SIDE_PADDING + left_panel_width + BOARD_GAP
+	var board_area_top := safe_top + TOP_BAR_HEIGHT + TOP_GAP
+	var board_area_right := viewport_size.x - safe_right - SAFE_SIDE_PADDING
+	var board_area_bottom := viewport_size.y - safe_bottom - SAFE_BOTTOM_PADDING
+	var available_width := maxf(BOARD_WIDTH * 24.0, board_area_right - board_area_left)
+	var available_height := maxf(BOARD_HEIGHT * 24.0, board_area_bottom - board_area_top)
+	var resolved_cell_size := floor(minf(available_width / BOARD_WIDTH, available_height / BOARD_HEIGHT))
+	cell_size = clampf(resolved_cell_size, 24.0, 72.0)
+	var board_pixel_size := Vector2(BOARD_WIDTH * cell_size, BOARD_HEIGHT * cell_size)
+	board_origin = Vector2(
+		board_area_left + maxf(0.0, (available_width - board_pixel_size.x) * 0.5),
+		board_area_top + maxf(0.0, (available_height - board_pixel_size.y) * 0.5)
+	)
+
+func _apply_touch_target_sizes() -> void:
+	if not _touch_input_available():
+		return
+	var min_height := TOUCH_TARGET_MIN_HEIGHT
+	back_button.custom_minimum_size.y = maxf(back_button.custom_minimum_size.y, min_height)
+	descend_button.custom_minimum_size.y = maxf(descend_button.custom_minimum_size.y, min_height)
+	dynamite_button.custom_minimum_size.y = maxf(dynamite_button.custom_minimum_size.y, min_height)
+
+func _touch_input_available() -> bool:
+	return OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
 
 func _process(_delta: float) -> void:
 	if is_animating and not animation_tiles.is_empty():
@@ -86,28 +158,82 @@ func _unhandled_input(event: InputEvent) -> void:
 	if is_animating:
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var cell := Vector2i(floor((event.position - BOARD_ORIGIN) / CELL_SIZE))
-		if cell.x >= 0 and cell.x < BOARD_WIDTH and cell.y >= 0 and cell.y < BOARD_HEIGHT:
-			if dynamite_targeting:
-				if board.use_dynamite(cell):
-					dynamite_targeting = false
-					_set_status("Dynamite detonated.")
-				else:
-					_set_status("Select a hardened stone tile for Dynamite.")
-				_update_hud()
+		var cell := _screen_to_cell(event.position, false)
+		if _is_board_cell(cell):
+			_handle_board_cell_pressed(cell)
+	elif event is InputEventScreenTouch:
+		if event.pressed:
+			var touch_cell := _screen_to_cell(event.position, true)
+			if not _is_board_cell(touch_cell):
+				_reset_touch_drag_state()
 				return
-			if selected_cell.x < 0:
-				selected_cell = cell
-				status_label.text = "Move along rows to clear the top edge (5 rows)"
-			else:
-				var moved: bool = board.try_move_to_empty(selected_cell, cell) if board.tiles[cell.y][cell.x] == null else board.try_swap(selected_cell, cell)
-				if moved:
-					_set_status("Resolving...")
-				else:
-					var blocked_reason := GameState.mine_blocked_reason()
-					_set_status(blocked_reason if not blocked_reason.is_empty() else "That move makes no match")
-				selected_cell = Vector2i(-1, -1)
-				queue_redraw()
+			if selected_cell.x >= 0 and touch_cell == selected_cell and not dynamite_targeting:
+				touch_drag_active = true
+				touch_drag_target_cell = Vector2i(-1, -1)
+				return
+			_handle_board_cell_pressed(touch_cell)
+			touch_drag_active = selected_cell.x >= 0 and not dynamite_targeting
+		else:
+			_commit_touch_drag_if_needed()
+	elif event is InputEventScreenDrag:
+		if not touch_drag_active or selected_cell.x < 0 or dynamite_targeting:
+			return
+		var drag_cell := _screen_to_cell(event.position, true)
+		var next_target := drag_cell if _is_board_cell(drag_cell) and drag_cell != selected_cell else Vector2i(-1, -1)
+		if next_target != touch_drag_target_cell:
+			touch_drag_target_cell = next_target
+			queue_redraw()
+
+func _handle_board_cell_pressed(cell: Vector2i) -> void:
+	_reset_touch_drag_state()
+	if dynamite_targeting:
+		if board.use_dynamite(cell):
+			dynamite_targeting = false
+			_set_status("Dynamite detonated.")
+		else:
+			_set_status("Select a hardened stone tile for Dynamite.")
+		_update_hud()
+		return
+	if selected_cell.x < 0:
+		selected_cell = cell
+		status_label.text = "Move along rows to clear the top edge (5 rows)"
+	else:
+		var moved: bool = board.try_move_to_empty(selected_cell, cell) if board.tiles[cell.y][cell.x] == null else board.try_swap(selected_cell, cell)
+		if moved:
+			_set_status("Resolving...")
+		else:
+			var blocked_reason := GameState.mine_blocked_reason()
+			_set_status(blocked_reason if not blocked_reason.is_empty() else "That move makes no match")
+		selected_cell = Vector2i(-1, -1)
+	queue_redraw()
+
+func _screen_to_cell(screen_position: Vector2, use_touch_slop: bool) -> Vector2i:
+	var local_pos := screen_position - board_origin
+	var board_size := Vector2(BOARD_WIDTH * cell_size, BOARD_HEIGHT * cell_size)
+	var slop := cell_size * TOUCH_EDGE_HIT_SLOP_RATIO if use_touch_slop else 0.0
+	if local_pos.x < -slop or local_pos.y < -slop or local_pos.x >= board_size.x + slop or local_pos.y >= board_size.y + slop:
+		return Vector2i(-1, -1)
+	var clamped_pos := Vector2(
+		clampf(local_pos.x, 0.0, maxf(board_size.x - 0.001, 0.0)),
+		clampf(local_pos.y, 0.0, maxf(board_size.y - 0.001, 0.0))
+	)
+	return Vector2i(floor(clamped_pos.x / cell_size), floor(clamped_pos.y / cell_size))
+
+func _is_board_cell(cell: Vector2i) -> bool:
+	return cell.x >= 0 and cell.x < BOARD_WIDTH and cell.y >= 0 and cell.y < BOARD_HEIGHT
+
+func _commit_touch_drag_if_needed() -> void:
+	if touch_drag_active and selected_cell.x >= 0 and _is_board_cell(touch_drag_target_cell):
+		_handle_board_cell_pressed(touch_drag_target_cell)
+	_reset_touch_drag_state()
+
+func _reset_touch_drag_state() -> void:
+	touch_drag_active = false
+	if touch_drag_target_cell.x >= 0:
+		touch_drag_target_cell = Vector2i(-1, -1)
+		queue_redraw()
+	else:
+		touch_drag_target_cell = Vector2i(-1, -1)
 
 func _on_board_animation_event(event: Dictionary) -> void:
 	animation_queue.append(event)
@@ -175,13 +301,18 @@ func _update_hud() -> void:
 	dynamite_button.disabled = is_animating or GameState.dynamite_count <= 0
 
 func _draw() -> void:
-	draw_rect(Rect2(0, 0, 1280, 720), Color("182329"))
+	draw_rect(Rect2(Vector2.ZERO, DisplayLayout.current_viewport_size()), Color("182329"))
+	var tile_padding := _tile_padding()
+	var tile_size := Vector2(cell_size - tile_padding, cell_size - tile_padding)
+	var font_size := int(clampf(cell_size * 0.25, 10.0, 16.0))
+	var text_offset := Vector2(cell_size * 0.14, cell_size * 0.58)
+	var draw_font := board_font if board_font != null else ThemeDB.fallback_font
 	for y in range(BOARD_HEIGHT):
 		for x in range(BOARD_WIDTH):
-			var rect := Rect2(BOARD_ORIGIN + Vector2(x, y) * CELL_SIZE, Vector2(CELL_SIZE - 3, CELL_SIZE - 3))
+			var rect := Rect2(board_origin + Vector2(x, y) * cell_size, tile_size)
 			var tile_id := ""
-			var cell_key := _cell_key(Vector2i(x, y))
-			if not hidden_cells.has(cell_key):
+			var cell := Vector2i(x, y)
+			if not hidden_cells.has(cell):
 				if is_animating and not visual_tile_ids.is_empty():
 					tile_id = visual_tile_ids[y][x] if visual_tile_ids[y][x] != null else ""
 				elif not board.tiles.is_empty() and board.tiles[y][x] != null:
@@ -190,15 +321,18 @@ func _draw() -> void:
 			draw_rect(rect, color, true)
 			draw_rect(rect, Color("dce5e1", 0.35), false, 2.0)
 			if not tile_id.is_empty():
-				draw_string(ThemeDB.fallback_font, rect.position + Vector2(9, 32), _tile_display_name(tile_id), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+				draw_string(draw_font, rect.position + text_offset, _tile_display_name(tile_id), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE)
 	if GameState.gate_state("magic_barrier") == GameState.GATE_ACTIVE and not GameState.progression.get("barrier_trinket_activated", false):
-		var barrier_y := BOARD_ORIGIN.y + 6.0 * CELL_SIZE
-		draw_line(Vector2(BOARD_ORIGIN.x, barrier_y), Vector2(BOARD_ORIGIN.x + BOARD_WIDTH * CELL_SIZE, barrier_y), Color("8f4bd6"), 6.0)
+		var barrier_y := board_origin.y + 6.0 * cell_size
+		draw_line(Vector2(board_origin.x, barrier_y), Vector2(board_origin.x + BOARD_WIDTH * cell_size, barrier_y), Color("8f4bd6"), clampf(cell_size * 0.1, 3.0, 6.0))
 	for animated_tile in animation_tiles:
 		_draw_animated_tile(animated_tile)
 	if selected_cell.x >= 0:
-		var selected_rect := Rect2(BOARD_ORIGIN + Vector2(selected_cell.x, selected_cell.y) * CELL_SIZE, Vector2(CELL_SIZE - 3, CELL_SIZE - 3))
+		var selected_rect := Rect2(board_origin + Vector2(selected_cell.x, selected_cell.y) * cell_size, tile_size)
 		draw_rect(selected_rect, Color.WHITE, false, 4.0)
+	if _is_board_cell(touch_drag_target_cell):
+		var target_rect := Rect2(board_origin + Vector2(touch_drag_target_cell.x, touch_drag_target_cell.y) * cell_size, tile_size)
+		draw_rect(target_rect, TOUCH_DRAG_TARGET_COLOR, false, 3.0)
 
 func _run_animation_queue() -> void:
 	_play_animation_queue()
@@ -206,6 +340,7 @@ func _run_animation_queue() -> void:
 func _play_animation_queue() -> void:
 	is_animating = true
 	selected_cell = Vector2i(-1, -1)
+	_reset_touch_drag_state()
 	_set_status("Animating mine...")
 	_update_hud()
 	while not animation_queue.is_empty():
@@ -245,7 +380,7 @@ func _play_clear_animation(cells: Array) -> void:
 	for cell_info in cells:
 		var cell: Vector2i = cell_info.get("cell", Vector2i.ZERO)
 		clear_cells.append(cell)
-		hidden_cells[_cell_key(cell)] = true
+		hidden_cells[cell] = true
 		var animated_tile := AnimatedTile.new()
 		animated_tile.tile_id = cell_info.get("tile_id", "")
 		animated_tile.position = _cell_position(cell)
@@ -281,8 +416,8 @@ func _play_swap_animation(event: Dictionary) -> void:
 
 	animation_tiles.clear()
 	hidden_cells.clear()
-	hidden_cells[_cell_key(first)] = true
-	hidden_cells[_cell_key(second)] = true
+	hidden_cells[first] = true
+	hidden_cells[second] = true
 
 	var first_tile := AnimatedTile.new()
 	first_tile.tile_id = first_tile_id
@@ -324,9 +459,9 @@ func _play_movement_animation(moves: Array, duration: float) -> void:
 			tile_id = existing if existing != null else ""
 		if _is_visual_cell(from_cell):
 			_set_visual_tile_id(from_cell, null)
-			hidden_cells[_cell_key(from_cell)] = true
+			hidden_cells[from_cell] = true
 		if _is_visual_cell(target_cell):
-			hidden_cells[_cell_key(target_cell)] = true
+			hidden_cells[target_cell] = true
 		var animated_tile := AnimatedTile.new()
 		animated_tile.tile_id = tile_id
 		animated_tile.position = _cell_position(from_cell)
@@ -346,27 +481,41 @@ func _play_movement_animation(moves: Array, duration: float) -> void:
 	queue_redraw()
 
 func _draw_animated_tile(animated_tile: AnimatedTile) -> void:
-	var size := Vector2(CELL_SIZE - 3, CELL_SIZE - 3) * animated_tile.scale
-	var top_left := animated_tile.position + (Vector2(CELL_SIZE - 3, CELL_SIZE - 3) - size) * 0.5
+	var tile_padding := _tile_padding()
+	var base_size := Vector2(cell_size - tile_padding, cell_size - tile_padding)
+	var size := base_size * animated_tile.scale
+	var top_left := animated_tile.position + (base_size - size) * 0.5
 	var rect := Rect2(top_left, size)
 	var base_color: Color = TILE_COLORS.get(animated_tile.tile_id, Color("39484d"))
 	var color := Color(base_color.r, base_color.g, base_color.b, animated_tile.alpha)
 	draw_rect(rect, color, true)
 	draw_rect(rect, Color("dce5e1", 0.35 * animated_tile.alpha), false, 2.0)
 	var label_text := _tile_display_name(animated_tile.tile_id)
-	draw_string(ThemeDB.fallback_font, top_left + Vector2(9, 32), label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 1, 1, animated_tile.alpha))
+	var draw_font := board_font if board_font != null else ThemeDB.fallback_font
+	draw_string(
+		draw_font,
+		top_left + Vector2(cell_size * 0.14, cell_size * 0.58),
+		label_text,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		int(clampf(cell_size * 0.25, 10.0, 16.0)),
+		Color(1, 1, 1, animated_tile.alpha)
+	)
 
 func _cell_position(cell: Vector2i) -> Vector2:
-	return BOARD_ORIGIN + Vector2(cell.x, cell.y) * CELL_SIZE
+	return board_origin + Vector2(cell.x, cell.y) * cell_size
 
-func _cell_key(cell: Vector2i) -> String:
-	return "%d:%d" % [cell.x, cell.y]
+
+func _tile_padding() -> float:
+	return clampf(cell_size * 0.06, 2.0, 4.0)
+
+func _cache_tile_display_names() -> void:
+	tile_display_names.clear()
+	for definition in definitions:
+		tile_display_names[definition.id] = definition.display_name
 
 func _tile_display_name(tile_id: String) -> String:
-	for definition in definitions:
-		if definition.id == tile_id:
-			return definition.display_name
-	return tile_id.capitalize()
+	return str(tile_display_names.get(tile_id, tile_id.capitalize()))
 
 func _sync_visual_tiles_from_board() -> void:
 	visual_tile_ids = board.serialize()

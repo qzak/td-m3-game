@@ -25,7 +25,7 @@ alongside code changes so it stays a reliable reference. See
 | [data/buildings/*.tres](../../data/buildings/) | `BuildingData` resources (`max_level`, per-level currency/material costs, optional per-level capacity/timer/speed vectors) — one per building id, including `towers.tres` (combat stats still live in `towers_stats.tres`/`TowerData`). |
 | [data/items/*.tres](../../data/items/) | `ItemData` resources for the 6 craftable weapons/armour pieces (see Weapon/Armour Smith section below). |
 | [autoload/game_state.gd](../../autoload/game_state.gd) (`GameState`) | `recruit_adventurer()`, `capacity_for()`, `set_active_roster()`, `upgrade_building()`, `start_smelting()`/`collect_ready_smelting()`, `craft_item()`, `equip_item()`/`unequip_item()` — the save-data mutations the hub drives. |
-| [autoload/save_manager.gd](../../autoload/save_manager.gd) (`SaveManager`) | Loads on Castle `_ready()`; autosaves on `EventBus.currency_changed` / `materials_changed` / `adventurer_recruited` / `building_upgraded` / `day_won` / `day_lost`. |
+| [autoload/save_manager.gd](../../autoload/save_manager.gd) (`SaveManager`) | Loads on Castle `_ready()`; autosaves on core `EventBus` state-change signals, and on mobile lifecycle pause it force-saves then pauses the tree until resume. |
 
 ## Hub Flow
 
@@ -51,8 +51,25 @@ alongside code changes so it stays a reliable reference. See
   `day_won`/`day_lost`), the scene reloads `castle.tscn` fresh — `CastleController._ready()` runs
   again and reloads the save, so anything `SaveManager` persisted mid-battle carries over (including
   any newly-unlocked Day).
-- Layout pass: Castle now uses a left rail for building/day controls and keeps the currently-open
-  building panel offset to the right to avoid top-bar overlap.
+- Mobile lifecycle handling now lives in `SaveManager`: on app background/suspend notifications it
+  writes `user://savegame.json` immediately and pauses `SceneTree`; on resume it restores play only
+  if that pause was applied by lifecycle handling.
+- Responsive layout pass: Castle HUD now routes through a safe-area `MarginContainer`; the top bar
+  is inset by safe-area margins and the main content sits below it with side/bottom padding.
+- Building navigation now lives in a container-driven left rail (`Sidebar`), while all building
+  panels fill a responsive right-side `PanelHost` instead of fixed pixel offsets.
+- Project display now uses canonical cross-platform stretch settings
+  (`window/stretch/mode="canvas_items"` + `window/stretch/aspect="expand"`), preserving the
+  authored 1280x720 layout baseline while allowing extra vertical room on taller viewports.
+- Project export presets are now committed in `export_presets.cfg` for:
+  - **Windows Desktop** (`build/windows/td-m3-game.exe`)
+  - **Linux/X11** (`build/linux/td-m3-game.x86_64`)
+  - **Android** (`build/android/td-m3-game.apk`) with placeholder custom-template + keystore fields
+  - **iOS** (`build/ios`) with placeholder team/profile signing fields
+- `project.godot` keeps `renderer/rendering_method="mobile"` for all targets. This project is
+  currently 2D/UI-heavy, so mobile renderer compatibility on desktop is acceptable and keeps one
+  consistent render path across PC + mobile unless a future feature requires desktop-only renderer
+  features.
 - The shared `TopResourceBar` spans the top edge of the screen. Castle uses the `castle` context by
   default and switches to the `smith` context when Smelter/Weapon Smith/Armour Smith are focused to
   prioritize refined-material visibility. The bar now shows a scene context tag and emphasizes

@@ -2,8 +2,12 @@ extends Node
 ## Handles persisting GameState to/from disk under user://.
 
 const SAVE_PATH := "user://savegame.json"
+var _mobile_runtime: bool = false
+var _lifecycle_backgrounded: bool = false
+var _paused_by_lifecycle: bool = false
 
 func _ready() -> void:
+	_mobile_runtime = OS.has_feature("mobile")
 	EventBus.currency_changed.connect(func(_v): save_game())
 	EventBus.materials_changed.connect(func(_id, _v): save_game())
 	EventBus.adventurer_recruited.connect(func(_id): save_game())
@@ -14,7 +18,47 @@ func _ready() -> void:
 	EventBus.mine_depth_changed.connect(func(_depth): save_game())
 	EventBus.progression_changed.connect(func(_reason): save_game())
 
+func _notification(what: int) -> void:
+	if not _mobile_runtime:
+		return
+	match what:
+		NOTIFICATION_APPLICATION_PAUSED:
+			_on_mobile_backgrounded()
+		NOTIFICATION_APPLICATION_RESUMED:
+			_on_mobile_resumed()
+
+func _on_mobile_backgrounded() -> void:
+	if _lifecycle_backgrounded:
+		return
+	_lifecycle_backgrounded = true
+	if not _write_save_data("mobile-background"):
+		push_warning("SaveManager: save-on-pause failed while app entered background.")
+	var tree := get_tree()
+	if tree == null:
+		return
+	if tree.paused:
+		_paused_by_lifecycle = false
+		return
+	tree.paused = true
+	_paused_by_lifecycle = true
+
+func _on_mobile_resumed() -> void:
+	if not _lifecycle_backgrounded:
+		return
+	_lifecycle_backgrounded = false
+	if not _paused_by_lifecycle:
+		return
+	var tree := get_tree()
+	if tree == null:
+		_paused_by_lifecycle = false
+		return
+	tree.paused = false
+	_paused_by_lifecycle = false
+
 func save_game() -> void:
+	_write_save_data("event-autosave")
+
+func _write_save_data(reason: String) -> bool:
 	var data := {
 		"currency": GameState.currency,
 		"materials": GameState.materials,
@@ -35,8 +79,15 @@ func save_game() -> void:
 		"shovel_unlocked": GameState.shovel_unlocked,
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if file:
-		file.store_string(JSON.stringify(data))
+	if file == null:
+		push_warning("SaveManager: failed opening %s for %s." % [SAVE_PATH, reason])
+		return false
+	file.store_string(JSON.stringify(data))
+	file.flush()
+	if file.get_error() != OK:
+		push_warning("SaveManager: failed writing %s for %s (error %d)." % [SAVE_PATH, reason, file.get_error()])
+		return false
+	return true
 
 func load_game() -> bool:
 	if not FileAccess.file_exists(SAVE_PATH):

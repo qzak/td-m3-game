@@ -3,13 +3,24 @@
 The mine is a 10x10 resource-gathering board. It is entered from the Castle's `Enter Mine`
 button and returns through `Return to Castle`.
 
+Project display uses canonical cross-platform stretch settings
+(`window/stretch/mode="canvas_items"` + `window/stretch/aspect="expand"`), with runtime layout now
+adapting to safe-area insets and viewport size.
+- Mine HUD labels/actions now live in a safe-area-aware container rail instead of fixed pixel
+  offsets.
+- Board origin/cell size are now computed from the live viewport, and the mine background draw uses
+  a viewport-relative rect instead of a fixed `1280x720` rectangle.
+- Draw-path perf pass (mobile-oriented): `MineController` now caches tile display-name lookups and
+  reuses `Vector2i` keys for hidden-cell checks during animation, reducing per-frame allocations in
+  its `_draw()` loop without changing board visuals/logic.
+
 ## Files
 
 | File | Responsibility |
 |---|---|
 | `scripts/match3/board.gd` (`MineBoard`) | Owns the tile array, legal swaps, match resolution, gravity, descent, depth gates, and serialization. |
 | `scripts/match3/match_solver.gd` (`MineMatchSolver`) | Finds horizontal and vertical runs of three or more, including boards with empty cells. |
-| `scripts/match3/mine_controller.gd` (`MineController`) | Draws the board, handles click-to-swap input, applies rewards to `GameState`, and updates the HUD. |
+| `scripts/match3/mine_controller.gd` (`MineController`) | Draws the board, handles mouse/touch board input (tap + drag target preview), applies rewards to `GameState`, and updates the HUD. |
 | `scenes/ui/top_resource_bar.tscn` / `scripts/ui/top_resource_bar.gd` (`TopResourceBar`) | Shared full-width resource strip with placeholder icon swatches, context filtering, and live `EventBus` updates. |
 | `data/tiles/*.tres` | Data-driven tile definitions, including progression blockers (`hard_stone`, `rooted_stone`). |
 | `autoload/save_manager.gd` | Persists `mine_depth` and the serialized current board in `user://savegame.json`. |
@@ -54,6 +65,14 @@ button and returns through `Return to Castle`.
 - While any animation is running, board input is hard-gated (`_unhandled_input` early return),
   `Descend` is disabled, active selection is cleared, and status is pinned to `Animating mine...`.
   Deferred status text (for example `New layer opened`) is shown after the queue finishes.
+- Touch parity:
+  - `InputEventScreenTouch` now mirrors click behavior for select/move/swap and Dynamite targeting.
+  - `InputEventScreenDrag` can preview a second target cell after selecting a source tile, then
+    releasing commits that move/swap as the touch equivalent of a second click.
+  - Touch hit-testing allows a small edge slop around the board bounds to make border-cell taps
+    easier.
+- Touch ergonomics: Mine action buttons (`Return to Castle`, `Descend`, `Use Dynamite`) enforce a
+  larger minimum height on touch-capable devices.
 - Mine-specific HUD now focuses on depth/status/actions; shared resource counts moved to the
   full-width `TopResourceBar` at the top of the scene.
 - Idle/help status copy now repeatedly calls out the goal ("clear the top edge") to make descent

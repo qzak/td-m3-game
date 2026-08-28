@@ -81,26 +81,6 @@ If a feature ships, remove it from this file and document as-built behavior in:
 
 ## Cross-Platform (PC + Mobile)
 
-- [ ] **PLAT-001 — Resolution/aspect strategy**
-  - Choose and configure a `stretch/aspect` mode (e.g. `expand`) so layouts work across desktop 16:9 and taller mobile aspect ratios instead of assuming a fixed 1280x720 canvas.
-
-- [ ] **PLAT-002 — Responsive layout pass**
-  - Replace hardcoded pixel positions/offsets (castle building panels, mine HUD labels, TD HUD labels) with anchors/containers and safe-area-aware layout.
-  - Replace hardcoded board/grid draw origins and cell sizes (`BOARD_ORIGIN`, `CELL_SIZE` in `mine_controller.gd`, `cell_size` in `grid_map.gd`) with viewport-relative sizing.
-  - Replace the hardcoded `Rect2(0, 0, 1280, 720)` background draw in `mine_controller.gd` with a viewport-relative rect.
-
-- [ ] **PLAT-003 — Touch input support**
-  - Add `InputEventScreenTouch`/`InputEventScreenDrag` handling alongside mouse input in `grid_map.gd` and `mine_controller.gd`.
-  - Increase tap target sizes for touch ergonomics and verify tap-to-pin fully substitutes for mouse-hover affordances (e.g. `unit_info_card.gd`).
-
-- [ ] **PLAT-004 — Platform export setup**
-  - Add PC (Windows/Linux) and mobile (Android, optionally iOS) export presets, including Android keystore/export template configuration.
-  - Verify `renderer/rendering_method="mobile"` is acceptable on desktop or set rendering method per-platform.
-
-- [ ] **PLAT-005 — Mobile lifecycle handling**
-  - Add pause-on-background/save-on-pause handling for mobile app suspend/resume via `save_manager.gd`.
-  - Review `_draw()`-heavy custom rendering (match-3 board, TD grid) for mobile GPU performance.
-
 - [ ] **AV-001 — Missing SFX hooks**
   - Add missing SFX triggers for combat, mine events, and day outcomes.
 

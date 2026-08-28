@@ -17,20 +17,22 @@ const UNIT_INFO_CARD_SCRIPT := preload("res://scripts/ui/unit_info_card.gd")
 @onready var grid: TDGridMap = $GridMap
 @onready var units_root: Node2D = $UnitsRoot
 @onready var step_timer: Timer = $StepTimer
-@onready var castle_hp_label: Label = $UI/HUD/CastleHPLabel
-@onready var wave_label: Label = $UI/HUD/WaveLabel
-@onready var wave_state_label: Label = $UI/HUD/WaveStateLabel
-@onready var result_label: Label = $UI/HUD/ResultLabel
-@onready var selected_label: Label = $UI/HUD/SelectedLabel
-@onready var start_button: Button = $UI/HUD/Controls/StartBattleButton
-@onready var auto_call_button: Button = $UI/HUD/Controls/AutoCallButton
-@onready var speed_1x_button: Button = $UI/HUD/Controls/Speed1xButton
-@onready var speed_2x_button: Button = $UI/HUD/Controls/Speed2xButton
-@onready var speed_3x_button: Button = $UI/HUD/Controls/Speed3xButton
-@onready var return_button: Button = $UI/HUD/Controls/ReturnToCastleButton
-@onready var placement_buttons_container: Container = $UI/HUD/Controls/PlacementButtonsContainer
+@onready var castle_hp_label: Label = $UI/HUD/SafeArea/Layout/StatusColumn/CastleHPLabel
+@onready var wave_label: Label = $UI/HUD/SafeArea/Layout/StatusColumn/WaveLabel
+@onready var wave_state_label: Label = $UI/HUD/SafeArea/Layout/StatusColumn/WaveStateLabel
+@onready var result_label: Label = $UI/HUD/SafeArea/Layout/StatusColumn/ResultLabel
+@onready var selected_label: Label = $UI/HUD/SafeArea/Layout/SelectedLabel
+@onready var start_button: Button = $UI/HUD/SafeArea/Layout/Controls/StartBattleButton
+@onready var auto_call_button: Button = $UI/HUD/SafeArea/Layout/Controls/AutoCallButton
+@onready var speed_1x_button: Button = $UI/HUD/SafeArea/Layout/Controls/Speed1xButton
+@onready var speed_2x_button: Button = $UI/HUD/SafeArea/Layout/Controls/Speed2xButton
+@onready var speed_3x_button: Button = $UI/HUD/SafeArea/Layout/Controls/Speed3xButton
+@onready var return_button: Button = $UI/HUD/SafeArea/Layout/Controls/ReturnToCastleButton
+@onready var placement_buttons_container: Container = $UI/HUD/SafeArea/Layout/Controls/PlacementButtonsContainer
 @onready var top_resource_bar: Control = $UI/HUD/TopResourceBar
 @onready var hud: Control = $UI/HUD
+@onready var safe_area: MarginContainer = $UI/HUD/SafeArea
+@onready var controls_row: HFlowContainer = $UI/HUD/SafeArea/Layout/Controls
 
 var enemies: Array[TDEnemy] = []
 var adventurers: Array[TDAdventurer] = []
@@ -64,6 +66,18 @@ var pinned_enemy_for_card: TDEnemy = null
 var pinned_adventurer_for_card: TDAdventurer = null
 var hovered_adventurer_for_card: TDAdventurer = null
 var last_pointer_screen_position: Vector2 = Vector2.ZERO
+var last_pointer_was_touch: bool = false
+const TOP_BAR_HEIGHT := 56.0
+const TOP_GAP := 12.0
+const SAFE_SIDE_PADDING := 16.0
+const SAFE_BOTTOM_PADDING := 16.0
+const GRID_SIDE_PADDING := 24.0
+const GRID_BOTTOM_CLEARANCE := 180.0
+const TOUCH_TARGET_MIN_HEIGHT := 56.0
+const MOUSE_ADVENTURER_PICK_RADIUS := 22.0
+const TOUCH_ADVENTURER_PICK_RADIUS := 34.0
+const MOUSE_ENEMY_PICK_RADIUS := 20.0
+const TOUCH_ENEMY_PICK_RADIUS := 32.0
 
 func _ready() -> void:
 	castle_hp = starting_castle_hp
@@ -74,11 +88,14 @@ func _ready() -> void:
 		if loaded_day != null:
 			day_data = loaded_day
 	grid.set_path_waypoints(day_data.path_waypoints)
+	_apply_responsive_layout()
+	DisplayLayout.viewport_size_changed.connect(_on_viewport_size_changed)
 
 	for wave in day_data.waves:
 		total_enemies_remaining_to_spawn += wave.count
 
 	_build_placement_buttons()
+	_apply_touch_target_sizes()
 
 	grid.cell_clicked.connect(_on_grid_cell_clicked)
 	grid.cell_hovered.connect(_on_grid_cell_hovered)
@@ -101,6 +118,74 @@ func _ready() -> void:
 
 	_update_wave_controls()
 	_update_hud()
+
+
+func _on_viewport_size_changed(_viewport_size: Vector2) -> void:
+	_apply_responsive_layout()
+
+
+func _apply_responsive_layout() -> void:
+	var margins: Dictionary = DisplayLayout.safe_area_margins()
+	var safe_left: float = float(margins.get("left", 0.0))
+	var safe_top: float = float(margins.get("top", 0.0))
+	var safe_right: float = float(margins.get("right", 0.0))
+	var safe_bottom: float = float(margins.get("bottom", 0.0))
+
+	top_resource_bar.offset_left = safe_left
+	top_resource_bar.offset_top = safe_top
+	top_resource_bar.offset_right = -safe_right
+	top_resource_bar.offset_bottom = safe_top + TOP_BAR_HEIGHT
+
+	safe_area.offset_left = safe_left + SAFE_SIDE_PADDING
+	safe_area.offset_top = safe_top + TOP_BAR_HEIGHT + TOP_GAP
+	safe_area.offset_right = -(safe_right + SAFE_SIDE_PADDING)
+	safe_area.offset_bottom = -(safe_bottom + SAFE_BOTTOM_PADDING)
+
+	_layout_grid_to_viewport(safe_left, safe_top, safe_right, safe_bottom)
+	_realign_units_to_grid()
+	_refresh_unit_info()
+
+
+func _layout_grid_to_viewport(safe_left: float, safe_top: float, safe_right: float, safe_bottom: float) -> void:
+	var viewport_size := DisplayLayout.current_viewport_size()
+	var available_left := safe_left + GRID_SIDE_PADDING
+	var available_top := safe_top + TOP_BAR_HEIGHT + TOP_GAP
+	var available_right := viewport_size.x - safe_right - GRID_SIDE_PADDING
+	var control_stack_height := controls_row.get_combined_minimum_size().y + selected_label.get_combined_minimum_size().y + 24.0
+	var available_bottom := viewport_size.y - safe_bottom - maxf(GRID_BOTTOM_CLEARANCE, control_stack_height)
+	var available_width := maxf(24.0 * float(grid.grid_width), available_right - available_left)
+	var available_height := maxf(16.0 * float(grid.grid_height), available_bottom - available_top)
+	var target_cell_size: float = floor(minf(available_width / float(grid.grid_width), available_height / float(grid.grid_height)))
+	grid.set_cell_size(clampf(target_cell_size, 20.0, 56.0))
+	var grid_size := grid.grid_pixel_size()
+	var grid_position := Vector2(
+		available_left + maxf(0.0, (available_width - grid_size.x) * 0.5),
+		available_top + maxf(0.0, (available_height - grid_size.y) * 0.5)
+	)
+	grid.position = grid_position
+	units_root.position = grid_position
+
+func _apply_touch_target_sizes() -> void:
+	if not _touch_input_available():
+		return
+	for control in [start_button, auto_call_button, speed_1x_button, speed_2x_button, speed_3x_button, return_button]:
+		control.custom_minimum_size.y = maxf(control.custom_minimum_size.y, TOUCH_TARGET_MIN_HEIGHT)
+	for child in placement_buttons_container.get_children():
+		if child is Control:
+			var control_child: Control = child
+			control_child.custom_minimum_size.y = maxf(control_child.custom_minimum_size.y, TOUCH_TARGET_MIN_HEIGHT)
+
+func _touch_input_available() -> bool:
+	return OS.has_feature("mobile") or DisplayServer.is_touchscreen_available()
+
+
+func _realign_units_to_grid() -> void:
+	for adventurer in adventurers:
+		if is_instance_valid(adventurer):
+			adventurer.move_to(adventurer.cell, grid.cell_to_world(adventurer.cell))
+	for enemy in enemies:
+		if is_instance_valid(enemy):
+			enemy.position = grid.cell_to_world(enemy.current_cell)
 
 ## Builds one placement button per adventurer in the active roster (falls back to a default
 ## trio when no roster has been chosen yet, e.g. running this scene directly for testing).
@@ -153,6 +238,8 @@ func _build_placement_buttons() -> void:
 
 		var button := Button.new()
 		button.text = "Place %s" % boosted.display_name
+		if _touch_input_available():
+			button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, TOUCH_TARGET_MIN_HEIGHT)
 		button.pressed.connect(_select_adventurer.bind(boosted))
 		placement_buttons_container.add_child(button)
 		adventurer_buttons[boosted.id] = button
@@ -166,6 +253,8 @@ func _build_spell_picker(def: AdventurerData) -> void:
 	if def.type != AdventurerData.AdventurerType.MAGIC or def.spell_ids.size() < 2:
 		return
 	var picker := OptionButton.new()
+	if _touch_input_available():
+		picker.custom_minimum_size.y = maxf(picker.custom_minimum_size.y, TOUCH_TARGET_MIN_HEIGHT)
 	for i in def.spell_ids.size():
 		var spell_id: String = def.spell_ids[i]
 		var spell: SpellData = load("res://data/adventurers/spells/%s.tres" % spell_id)
@@ -320,17 +409,24 @@ func _unhandled_input(event: InputEvent) -> void:
 	if placement_open:
 		return
 	if event is InputEventMouseMotion:
+		last_pointer_was_touch = false
 		last_pointer_screen_position = event.position
 		_handle_hover_card(event.position)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		last_pointer_was_touch = false
 		last_pointer_screen_position = event.position
 		_handle_tap_or_click_card(event.position)
+	elif event is InputEventScreenDrag:
+		last_pointer_was_touch = true
+		last_pointer_screen_position = event.position
+		_handle_hover_card(event.position)
 	elif event is InputEventScreenTouch and event.pressed:
+		last_pointer_was_touch = true
 		last_pointer_screen_position = event.position
 		_handle_tap_or_click_card(event.position)
 
 func _handle_hover_card(screen_position: Vector2) -> void:
-	if OS.has_feature("mobile") or pinned_enemy_for_card != null or pinned_adventurer_for_card != null:
+	if OS.has_feature("mobile") or last_pointer_was_touch or pinned_enemy_for_card != null or pinned_adventurer_for_card != null:
 		return
 	hovered_adventurer_for_card = _pick_adventurer_at_screen(screen_position)
 	_refresh_unit_info()
@@ -355,11 +451,12 @@ func _handle_tap_or_click_card(screen_position: Vector2) -> void:
 func _pick_adventurer_at_screen(screen_position: Vector2) -> TDAdventurer:
 	var best: TDAdventurer = null
 	var best_distance := 999999.0
+	var pick_radius := TOUCH_ADVENTURER_PICK_RADIUS if last_pointer_was_touch else MOUSE_ADVENTURER_PICK_RADIUS
 	for adventurer in adventurers:
 		if not is_instance_valid(adventurer):
 			continue
 		var distance := adventurer.global_position.distance_to(screen_position)
-		if distance <= 22.0 and distance < best_distance:
+		if distance <= pick_radius and distance < best_distance:
 			best = adventurer
 			best_distance = distance
 	return best
@@ -367,11 +464,12 @@ func _pick_adventurer_at_screen(screen_position: Vector2) -> TDAdventurer:
 func _pick_enemy_at_screen(screen_position: Vector2) -> TDEnemy:
 	var best: TDEnemy = null
 	var best_distance := 999999.0
+	var pick_radius := TOUCH_ENEMY_PICK_RADIUS if last_pointer_was_touch else MOUSE_ENEMY_PICK_RADIUS
 	for enemy in enemies:
 		if not is_instance_valid(enemy) or enemy.dying:
 			continue
 		var distance := enemy.global_position.distance_to(screen_position)
-		if distance > 20.0:
+		if distance > pick_radius:
 			continue
 		if best == null or enemy.path_index > best.path_index or (enemy.path_index == best.path_index and distance < best_distance):
 			best = enemy

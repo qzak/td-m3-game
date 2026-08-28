@@ -2,35 +2,43 @@ extends Node2D
 class_name CastleController
 ## Hub scene: load the save, and switch between Tavern/Quarters panels or start a Day.
 
-@onready var tavern_panel: TavernController = $UI/HUD/TavernPanel
-@onready var quarters_panel: QuartersController = $UI/HUD/QuartersPanel
-@onready var smelter_panel: SmelterController = $UI/HUD/SmelterPanel
-@onready var weapon_smith_panel: WeaponSmithController = $UI/HUD/WeaponSmithPanel
-@onready var armour_smith_panel: ArmourSmithController = $UI/HUD/ArmourSmithPanel
-@onready var armoury_panel: ArmouryController = $UI/HUD/ArmouryPanel
-@onready var towers_panel: TowersPanel = $UI/HUD/TowersPanel
-@onready var war_room_panel: Control = $UI/HUD/WarRoomPanel
-@onready var workshop_panel: Control = $UI/HUD/WorkshopPanel
-@onready var tavern_button: Button = $UI/HUD/Controls/TavernButton
-@onready var quarters_button: Button = $UI/HUD/Controls/QuartersButton
-@onready var smelter_button: Button = $UI/HUD/Controls/SmelterButton
-@onready var weapon_smith_button: Button = $UI/HUD/Controls/WeaponSmithButton
-@onready var armour_smith_button: Button = $UI/HUD/Controls/ArmourSmithButton
-@onready var armoury_button: Button = $UI/HUD/Controls/ArmouryButton
-@onready var towers_button: Button = $UI/HUD/Controls/TowersButton
-@onready var war_room_button: Button = $UI/HUD/Controls/WarRoomButton
-@onready var workshop_button: Button = $UI/HUD/Controls/WorkshopButton
-@onready var mine_button: Button = $UI/HUD/Controls/MineButton
-@onready var controls: GridContainer = $UI/HUD/Controls
-@onready var close_panel_button: Button = $UI/HUD/ClosePanelButton
+@onready var tavern_panel: TavernController = $UI/HUD/SafeArea/MainColumns/PanelHost/TavernPanel
+@onready var quarters_panel: QuartersController = $UI/HUD/SafeArea/MainColumns/PanelHost/QuartersPanel
+@onready var smelter_panel: SmelterController = $UI/HUD/SafeArea/MainColumns/PanelHost/SmelterPanel
+@onready var weapon_smith_panel: WeaponSmithController = $UI/HUD/SafeArea/MainColumns/PanelHost/WeaponSmithPanel
+@onready var armour_smith_panel: ArmourSmithController = $UI/HUD/SafeArea/MainColumns/PanelHost/ArmourSmithPanel
+@onready var armoury_panel: ArmouryController = $UI/HUD/SafeArea/MainColumns/PanelHost/ArmouryPanel
+@onready var towers_panel: TowersPanel = $UI/HUD/SafeArea/MainColumns/PanelHost/TowersPanel
+@onready var war_room_panel: Control = $UI/HUD/SafeArea/MainColumns/PanelHost/WarRoomPanel
+@onready var workshop_panel: Control = $UI/HUD/SafeArea/MainColumns/PanelHost/WorkshopPanel
+@onready var tavern_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/TavernButton
+@onready var quarters_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/QuartersButton
+@onready var smelter_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/SmelterButton
+@onready var weapon_smith_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/WeaponSmithButton
+@onready var armour_smith_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/ArmourSmithButton
+@onready var armoury_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/ArmouryButton
+@onready var towers_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/TowersButton
+@onready var war_room_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/WarRoomButton
+@onready var workshop_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/WorkshopButton
+@onready var mine_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls/MineButton
+@onready var controls: GridContainer = $UI/HUD/SafeArea/MainColumns/Sidebar/Controls
+@onready var close_panel_button: Button = $UI/HUD/SafeArea/MainColumns/Sidebar/ClosePanelButton
 @onready var top_resource_bar: Control = $UI/HUD/TopResourceBar
-@onready var objective_label: Label = $UI/HUD/ObjectiveLabel
+@onready var objective_label: Label = $UI/HUD/SafeArea/MainColumns/Sidebar/ObjectiveLabel
+@onready var safe_area: MarginContainer = $UI/HUD/SafeArea
+@onready var side_bar: VBoxContainer = $UI/HUD/SafeArea/MainColumns/Sidebar
 
 var all_panels: Array[Control] = []
+const TOP_BAR_HEIGHT := 56.0
+const CONTENT_GAP := 12.0
+const SAFE_SIDE_PADDING := 16.0
+const SAFE_BOTTOM_PADDING := 16.0
 
 func _ready() -> void:
 	SaveManager.load_game()
 	top_resource_bar.set_context("castle")
+	_apply_safe_area_layout()
+	DisplayLayout.viewport_size_changed.connect(_on_viewport_size_changed)
 
 	all_panels = [tavern_panel, quarters_panel, smelter_panel, weapon_smith_panel, armour_smith_panel, armoury_panel, towers_panel, war_room_panel, workshop_panel]
 
@@ -50,6 +58,30 @@ func _ready() -> void:
 
 	_show_panel(null)
 	_refresh_progression_ui()
+
+
+func _on_viewport_size_changed(_viewport_size: Vector2) -> void:
+	_apply_safe_area_layout()
+
+
+func _apply_safe_area_layout() -> void:
+	var margins: Dictionary = DisplayLayout.safe_area_margins()
+	var safe_left: float = float(margins.get("left", 0.0))
+	var safe_top: float = float(margins.get("top", 0.0))
+	var safe_right: float = float(margins.get("right", 0.0))
+	var safe_bottom: float = float(margins.get("bottom", 0.0))
+
+	top_resource_bar.offset_left = safe_left
+	top_resource_bar.offset_top = safe_top
+	top_resource_bar.offset_right = -safe_right
+	top_resource_bar.offset_bottom = safe_top + TOP_BAR_HEIGHT
+
+	safe_area.offset_left = safe_left + SAFE_SIDE_PADDING
+	safe_area.offset_top = safe_top + TOP_BAR_HEIGHT + CONTENT_GAP
+	safe_area.offset_right = -(safe_right + SAFE_SIDE_PADDING)
+	safe_area.offset_bottom = -(safe_bottom + SAFE_BOTTOM_PADDING)
+	var viewport_width := DisplayLayout.current_viewport_size().x
+	side_bar.custom_minimum_size.x = clampf(viewport_width * 0.23, 220.0, 320.0)
 
 ## Shows exactly one building panel (or none, if panel is null) and refreshes it so its
 ## contents rebuild against current GameState whenever it's opened.

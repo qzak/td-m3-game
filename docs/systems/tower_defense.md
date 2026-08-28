@@ -10,7 +10,7 @@ alongside code changes so it stays a reliable reference. See
 |---|---|
 | [scenes/tower_defense/td_battle.tscn](../../scenes/tower_defense/td_battle.tscn) | Main battle scene: grid, units root, HUD, step timer. Currently the project's run scene. |
 | [scripts/tower_defense/battle_controller.gd](../../scripts/tower_defense/battle_controller.gd) (`TDBattleController`) | Owns the move/attack step loop, spawning, targeting, win/lose, placement mode, HUD wiring. |
-| [scripts/tower_defense/grid_map.gd](../../scripts/tower_defense/grid_map.gd) (`TDGridMap`) | Draws the grid + path, hit-tests mouse clicks/hover into cells, draws the range-preview overlay. |
+| [scripts/tower_defense/grid_map.gd](../../scripts/tower_defense/grid_map.gd) (`TDGridMap`) | Draws the grid + path, hit-tests mouse/touch input into cells (tap + drag hover), and draws the range-preview overlay. |
 | [scripts/tower_defense/adventurer.gd](../../scripts/tower_defense/adventurer.gd) (`TDAdventurer`) | Per-placed-unit state: attack pool charge/regen, range check. |
 | [scripts/tower_defense/enemy.gd](../../scripts/tower_defense/enemy.gd) (`TDEnemy`) | Per-enemy state: health/armour, path following, move-speed cooldown. |
 | [data/tower_defense/status_effect_profile.gd](../../data/tower_defense/status_effect_profile.gd) + [data/tower_defense/status_profiles/*.tres](../../data/tower_defense/status_profiles/) | Data-driven on-hit status effect profile used by adventurers/spells (slow, armour break, anti-swarm). |
@@ -23,7 +23,9 @@ alongside code changes so it stays a reliable reference. See
 
 ## Grid & Path
 
-- 24x16 grid, 32px cells, `TDGridMap` positioned at `(80, 80)` in the scene.
+- 24x16 grid with runtime-sized cells; `TDBattleController` now computes `TDGridMap` cell size and
+  origin from the current viewport + safe-area insets, then keeps `UnitsRoot` aligned to that same
+  origin.
 - The castle doors always sit at the top-middle cell (`Vector2i(grid_width / 2, 0)`).
 - Enemy routes are now day-specific: `DayData.path_waypoints` (stored in `data/waves/day_1.tres`
   through `day_5.tres`) defines each day's hardcoded, axis-aligned waypoint chain. `TDGridMap`
@@ -31,15 +33,21 @@ alongside code changes so it stays a reliable reference. See
   membership checks (drawing/buildability). Missing or invalid waypoint data falls back to the
   legacy default route.
 - The castle-door cell is drawn with a distinct dark/gold marker.
+- `TDGridMap`'s draw pass now avoids per-cell outline overdraw by drawing shared grid lines once,
+  and range preview now caches only the in-range cells instead of scanning the full grid every hover
+  update. Visual behavior is unchanged; this trims mobile draw/GPU work during placement preview.
 - All non-path cells are buildable; `occupied_cells` (keyed by `Vector2i`) tracks which ones
   already have an adventurer.
 - **Important gotcha:** the `HUD` `Control` covers the whole viewport, so its `mouse_filter`
-  must stay `IGNORE` (`2`) or it silently swallows clicks/hover meant for the grid. Buttons
+  must stay `IGNORE` (`2`) or it silently swallows clicks/hover/touch-drag meant for the grid. Buttons
   underneath keep their own `STOP` filter and still work normally.
 - Resource display is now provided by the shared full-width `TopResourceBar` (battle context), while
   battle-specific labels (castle HP, wave state, selection/status) stay on the TD HUD.
-- HUD labels that matter during combat (`CastleHPLabel`, `WaveLabel`, `WaveStateLabel`) are offset
-  below the top bar safe zone for clearer 1280x720 readability.
+- TD HUD labels are now container-driven (`SafeArea/Layout/StatusColumn`) and safe-area-aware
+  instead of fixed offsets; they stay anchored under the shared top bar across viewport sizes.
+- Project display now uses canonical cross-platform stretch settings
+  (`window/stretch/mode="canvas_items"` + `window/stretch/aspect="expand"`), so TD keeps its authored
+  1280x720 composition while taller displays gain extra vertical space.
 
 ## Battle Loop
 
@@ -179,11 +187,12 @@ the TD battle step timer cadence (`StepTimer.wait_time`) and does not affect Cas
   adventurer in `GameState.active_roster_ids`, chosen in the Castle's Quarters — see
   [docs/systems/castle.md](castle.md)) sets `selected_adventurer_data` and updates the
   `SelectedLabel` HUD text.
-- While a unit type is selected, moving the mouse over the grid emits `TDGridMap.cell_hovered`,
-  which the controller uses to call `grid.set_range_preview(cell, range_min, range_max)`. The
-  grid highlights every cell within Manhattan distance `[range_min, range_max]` of the
-  hovered cell with a translucent red overlay and a bold red outline, and tints the hovered
-  cell itself green — this is the "what would this unit be able to hit from here" preview.
+- While a unit type is selected, moving the pointer over the grid emits `TDGridMap.cell_hovered`
+  (`InputEventMouseMotion` on desktop, `InputEventScreenDrag` for touch), which the controller
+  uses to call `grid.set_range_preview(cell, range_min, range_max)`. The grid highlights every
+  cell within Manhattan distance `[range_min, range_max]` of the hovered cell with a translucent
+  red overlay and a bold red outline, and tints the hovered cell itself green — this is the
+  "what would this unit be able to hit from here" preview.
 - Clicking a buildable cell instantiates `adventurer_unit.tscn`, calls `setup()`, and marks the
   cell occupied. Each adventurer represents a unique recruited individual, so only one copy of
   a given adventurer (`AdventurerData.id`) can be placed at a time — `TDBattleController` tracks
@@ -232,7 +241,11 @@ The Berserker still has the slowest charge (lowest `attack_regen`) among recruit
 - Hover/tap inspection:
   - Desktop hover over an adventurer opens an info card near cursor and shows that unit's range.
   - Click/tap pins an adventurer or enemy card; click/tap empty space closes it.
+  - Tap/click pick radii are now larger for touch than mouse, so tap-to-pin reliably substitutes
+    for hover on mobile/touch devices.
   - Placement/reposition controls keep priority: cards are disabled while placement is open.
+ - Touch ergonomics: battle control buttons (`Call Wave`, `Auto-Call`, speed controls, `Return to Castle`,
+   placement buttons, and spell pickers) enforce a larger minimum height on touch-capable devices.
 
 ## Combat Animation Details
 
