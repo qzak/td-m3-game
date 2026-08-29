@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="WaveData" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://data/waves/wave_data.gd" id="1"]
-[ext_resource type="Resource" path="res://data/enemies/goblin_rider.tres" id="2"]
+[ext_resource type="Resource" path="res://data/enemies/wyrmling.tres" id="2"]
 
 [resource]
 script = ExtResource("1")

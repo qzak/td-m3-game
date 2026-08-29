@@ -4,13 +4,13 @@
 
 [resource]
 script = ExtResource("1")
-id = "goblin_shaman"
-display_name = "Goblin Shaman"
-health = 17
-armour = 1
+id = "young_drake"
+display_name = "Young Drake"
+health = 60
+armour = 3
 move_steps_per_turn = 1
+move_period = 2
 is_boss = false
-can_stun = true
-stun_duration_steps = 2
-stun_range = 1
-bounty = 8
+bounty = 10
+drop_material_id = "volatile_core"
+drop_amount = 1

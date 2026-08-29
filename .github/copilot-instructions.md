@@ -20,13 +20,20 @@ Use this repo context when answering or editing code.
 - Avoid styles that clash with the target (neon sci-fi, hyper-glossy UI, overly realistic rendering).
 - Keep UI and icon suggestions pixel-friendly and legible at small resolutions.
 
+## Story & Theming (Important)
+
+- All enemies are dragons, from small whelps early on to ancient wyrm bosses later. Never
+  introduce other monster families (goblins, orcs, undead, etc.).
+- See `docs/LORE.md` for the story premise and enemy naming conventions before adding new enemy content.
+
 ## Read First
 
 1. `AGENTS.md`
 2. `docs/IMPLEMENTATION_PLAN.md`
-3. `docs/systems/tower_defense.md`
-4. `docs/systems/match3.md`
-5. `docs/systems/castle.md`
+3. `docs/LORE.md`
+4. `docs/systems/tower_defense.md`
+5. `docs/systems/match3.md`
+6. `docs/systems/castle.md`
 
 ## Working Rules
 

@@ -4,13 +4,14 @@
 
 [resource]
 script = ExtResource("1")
-id = "large_goblin"
-display_name = "Large Goblin"
-health = 60
-armour = 3
+id = "drake_warlock"
+display_name = "Drake Warlock"
+health = 30
+armour = 2
 move_steps_per_turn = 1
 move_period = 2
 is_boss = false
-bounty = 10
-drop_material_id = "volatile_core"
-drop_amount = 1
+can_stun = true
+stun_duration_steps = 2
+stun_range = 2
+bounty = 12

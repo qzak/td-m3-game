@@ -16,12 +16,20 @@ This file helps coding agents get productive quickly in this repository.
 - UI generation rule: keep pixel-friendly shapes and spacing, avoid ultra-modern glossy UI language, and favor legibility at small resolutions.
 - Consistency rule: when proposing new visuals, describe how they match existing palette and tone before suggesting alternatives.
 
+## Story & Theming (Important)
+
+- See [docs/LORE.md](docs/LORE.md) for the full story bible and enemy naming conventions.
+- All enemies are dragons (whelps up through ancient wyrms) — never introduce goblins, orcs,
+  undead, or other monster families. New enemy content must fit the dragon power-curve naming
+  scheme documented there.
+
 ## Start Here (Reading Order)
 
 1. `docs/IMPLEMENTATION_PLAN.md` for the pending implementation backlog.
-2. `docs/systems/tower_defense.md` for the TD loop, pathing, spawning, and day/wave flow.
-3. `docs/systems/match3.md` for board rules, descent mechanic, and reward logic.
-4. `docs/systems/castle.md` for building panels, progression, and scene flow.
+2. `docs/LORE.md` for the story premise and enemy theming/naming rules.
+3. `docs/systems/tower_defense.md` for the TD loop, pathing, spawning, and day/wave flow.
+4. `docs/systems/match3.md` for board rules, descent mechanic, and reward logic.
+5. `docs/systems/castle.md` for building panels, progression, and scene flow.
 
 ## Code Map
 

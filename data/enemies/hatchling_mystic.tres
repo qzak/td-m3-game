@@ -4,11 +4,13 @@
 
 [resource]
 script = ExtResource("1")
-id = "goblin_brute"
-display_name = "Goblin Brute"
-health = 85
-armour = 5
+id = "hatchling_mystic"
+display_name = "Hatchling Mystic"
+health = 17
+armour = 1
 move_steps_per_turn = 1
-move_period = 2
 is_boss = false
-bounty = 16
+can_stun = true
+stun_duration_steps = 2
+stun_range = 1
+bounty = 8

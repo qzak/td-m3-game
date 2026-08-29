@@ -4,8 +4,8 @@
 
 [resource]
 script = ExtResource("1")
-id = "goblin"
-display_name = "Goblin"
+id = "whelp"
+display_name = "Whelp"
 health = 25
 armour = 0
 move_steps_per_turn = 1

@@ -68,7 +68,7 @@ alternates:
   Attack visuals fire per hit (melee swing or ranged projectile/impact), and kills are removed
   from simulation immediately before their death tween finishes on-screen. Kill rewards now include:
   bounty gold, optional enemy material drops (`EnemyData.drop_material_id` + `drop_amount`), and
-  progression rewards (Day 3 Goblin Warlord grants the barrier trinket when that gate is active).
+  progression rewards (Day 3 Elder Wyrm grants the barrier trinket when that gate is active).
 
 Win condition: no enemies left alive and no wave left to call. Loss condition: castle HP
 hits 0. Both stop the timer and set `battle_over`.
@@ -102,13 +102,13 @@ the TD battle step timer cadence (`StepTimer.wait_time`) and does not affect Cas
 
 | Name | id | Health | Armour | Move Speed |
 |---|---|---|---|---|
-| Goblin | `goblin` | 25 | 0 | 1 cell every move step |
-| Goblin Rider | `goblin_rider` | 20 | 0 | 1 cell every move step (plus occasional double-move burst) |
-| Goblin Shaman | `goblin_shaman` | 17 | 1 | 1 cell every move step (stuns nearby adventurers) |
-| Goblin Hexer | `goblin_hexer` | 30 | 2 | 1 cell every **other** move step (longer-range stun support) |
-| Large Goblin | `large_goblin` | 60 | 3 | 1 cell every **other** move step, blocks the path behind it, and drops Volatile Core |
-| Goblin Brute | `goblin_brute` | 85 | 5 | 1 cell every **other** move step, heavy-armour blocker |
-| Goblin Warlord | `goblin_warlord` | 180 | 7 | 1 cell every **other** move step, Day 3 boss gate target |
+| Whelp | `whelp` | 25 | 0 | 1 cell every move step |
+| Wyrmling | `wyrmling` | 20 | 0 | 1 cell every move step (plus occasional double-move burst) |
+| Hatchling Mystic | `hatchling_mystic` | 17 | 1 | 1 cell every move step (stuns nearby adventurers) |
+| Drake Warlock | `drake_warlock` | 30 | 2 | 1 cell every **other** move step (longer-range stun support) |
+| Young Drake | `young_drake` | 60 | 3 | 1 cell every **other** move step, blocks the path behind it, and drops Volatile Core |
+| War Drake | `war_drake` | 85 | 5 | 1 cell every **other** move step, heavy-armour blocker |
+| Elder Wyrm | `elder_wyrm` | 180 | 7 | 1 cell every **other** move step, Day 3 boss gate target |
 
 ## Day / Wave Structure
 
@@ -130,8 +130,8 @@ the TD battle step timer cadence (`StepTimer.wait_time`) and does not affect Cas
   call the next wave. This is deliberate — it stops adventurers from passively racking up
   attack points between waves. `_begin_wave()` resumes the timer (and resets `is_move_phase` to
   `true` so the next tick is a clean move step) if it was stopped.
-- [data/waves/day_1.tres](../../data/waves/day_1.tres) is the current sample: goblins in
-  waves 1-3 (5 @ 2-step spacing, 8 @ 2-step, 10 @ 1-step), then a 4th wave of 3 Large Goblins
+- [data/waves/day_1.tres](../../data/waves/day_1.tres) is the current sample: whelps in
+  waves 1-3 (5 @ 2-step spacing, 8 @ 2-step, 10 @ 1-step), then a 4th wave of 3 Young Drakes
   (4-step spacing) to demonstrate the path-blocking behavior. `difficulty_scalar = 1.0`.
 - Tactical preview now lives in top-bar battle chips:
   - `Wave` chip: `Day X • Wave Y/Z • Spawn N`
@@ -143,20 +143,20 @@ the TD battle step timer cadence (`StepTimer.wait_time`) and does not affect Cas
     `Breather`, `Final wave cleared`).
 - `EventBus.day_started/day_won/day_lost` now emit `day_data.day_index` instead of a hardcoded 0.
 - [data/waves/day_2.tres](../../data/waves/day_2.tres) is a harder second Day (`difficulty_scalar =
-  1.3`, `completion_reward = 200`): goblins, then Goblin Riders, then Goblin Hexers, then Large
-  Goblins, then a fast 8-strong Goblin Rider finale wave (1-step spacing).
+  1.3`, `completion_reward = 200`): whelps, then Wyrmlings, then Drake Warlocks, then Young
+  Drakes, then a fast 8-strong Wyrmling finale wave (1-step spacing).
 - [data/waves/day_3.tres](../../data/waves/day_3.tres) is a third Day (`difficulty_scalar = 1.6`,
   `completion_reward = 210`) with six waves on a rising curve:
-  Goblin Riders → Large Goblins → Goblin Brutes → a tight 10-strong Goblin Rider swarm
-  (1-step spacing) → Goblin Shamans → more Shamans.
+  Wyrmlings → Young Drakes → War Drakes → a tight 10-strong Wyrmling swarm
+  (1-step spacing) → Hatchling Mystics → more Mystics.
 - [data/waves/day_4.tres](../../data/waves/day_4.tres) pushes pacing further (`difficulty_scalar = 1.9`,
   `completion_reward = 280`) with seven waves that alternate tempo and control pressure:
-  Goblins → Goblin Riders → Goblin Hexers → Large Goblins (slower breather) → a fast
-  Goblin Shaman surge → heavier Goblin Rider swarm → Goblin Brute finale.
+  Whelps → Wyrmlings → Drake Warlocks → Young Drakes (slower breather) → a fast
+  Hatchling Mystic surge → heavier Wyrmling swarm → War Drake finale.
 - [data/waves/day_5.tres](../../data/waves/day_5.tres) is the current peak (`difficulty_scalar = 2.25`,
-  `completion_reward = 360`) with eight waves escalating through Riders/Hexers/Large Goblins,
-  then sustained Shaman/Brute pressure into a dense Goblin Rider spike and a heavy Goblin
-  Brute close.
+  `completion_reward = 360`) with eight waves escalating through Wyrmlings/Drake Warlocks/Young Drakes,
+  then sustained Mystic/War Drake pressure into a dense Wyrmling spike and a heavy War Drake
+  close.
 
 ## Day Selection
 
@@ -350,8 +350,8 @@ The Berserker still has the slowest charge (lowest `attack_regen`) among recruit
 
 ## Gold Economy
 
-- `EnemyData.bounty` (default `5`, tuned up for tougher types — Goblin Rider `10`,
-  Goblin Shaman `8`, Large Goblin `10`, Goblin Hexer `12`, Goblin Brute `16`) is awarded via
+- `EnemyData.bounty` (default `5`, tuned up for tougher types — Wyrmling `10`,
+  Hatchling Mystic `8`, Young Drake `10`, Drake Warlock `12`, War Drake `16`) is awarded via
   `GameState.add_currency()` the instant an enemy dies in
   `_attack_step()`. Enemies that reach the castle door instead (no kill) grant nothing.
 - `DayData.completion_reward` (`130` on `day_1.tres`) is awarded once, on a full Day clear, right

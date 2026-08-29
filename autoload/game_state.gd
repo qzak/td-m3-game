@@ -201,14 +201,14 @@ func castle_objective_text() -> String:
 	if gate_state("hardness_a") == GATE_ACTIVE:
 		if dynamite_count > 0:
 			return "Objective: Use Dynamite in the Mine to blast hardened stone."
-		return "Objective: Defeat Large Goblins for Volatile Core, then craft Dynamite in Workshop."
+		return "Objective: Defeat Young Drakes for Volatile Core, then craft Dynamite in Workshop."
 	if gate_state("hardness_b") == GATE_ACTIVE:
 		if shovel_unlocked:
 			return "Objective: Return to the Mine and clear immovable strata with your Shovel."
 		return "Objective: Craft a Shovel in Workshop to clear immovable mine pieces."
 	if gate_state("magic_barrier") == GATE_ACTIVE:
 		if not progression.get("barrier_trinket_obtained", false):
-			return "Objective: Defeat the Day 3 Goblin Warlord boss for the Wardbreaker Trinket."
+			return "Objective: Defeat the Day 3 Elder Wyrm boss for the Wardbreaker Trinket."
 		if not progression.get("barrier_trinket_activated", false):
 			return "Objective: Attune the Wardbreaker Trinket in Workshop to dispel the barrier."
 	return "Objective: Push deeper into the mine and strengthen your roster."

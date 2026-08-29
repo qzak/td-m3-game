@@ -774,7 +774,7 @@ func _on_enemy_killed(enemy: TDEnemy) -> void:
 	GameState.add_currency(enemy.data.bounty)
 	if not enemy.data.drop_material_id.is_empty() and enemy.data.drop_amount > 0:
 		GameState.add_material(enemy.data.drop_material_id, enemy.data.drop_amount)
-	if day_data.day_index == 3 and enemy.data.id == "goblin_warlord" and GameState.gate_state("magic_barrier") == GameState.GATE_ACTIVE:
+	if day_data.day_index == 3 and enemy.data.id == "elder_wyrm" and GameState.gate_state("magic_barrier") == GameState.GATE_ACTIVE:
 		GameState.grant_barrier_trinket()
 
 ## Fixed last-resort defenders flanking the castle door; never placed/removed by the player.
