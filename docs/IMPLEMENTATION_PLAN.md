@@ -64,6 +64,11 @@ If a feature ships, remove it from this file and document as-built behavior in:
   - Wire Library unlock timing/requirements into progression.
   - Add subtle "new entry discovered" post-battle feedback.
 
+- [ ] **CASTLE-009 — Rework Armoury UI**
+  - Set up a grid based armoury, so it works similar to typical RPG game inventories.
+  - There should be a 20x20 inventory grid which is displayed when entering the Armoury building.
+  - Each adventurer will have two slots, weapon and armour (this needs to be extensible as it might expand to 3 or more slots later), which will be displayed when clicked from a list in the armoury, and the player will be able to drag and drop the equipment onto the adventurer slots.
+
 ## UX / Presentation
 
 - [ ] **UX-002 — High-signal feedback pass**
