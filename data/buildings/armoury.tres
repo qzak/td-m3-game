@@ -9,4 +9,4 @@ display_name = "Armoury"
 max_level = 5
 upgrade_material_costs = Array[Dictionary]([{}, {"copper": 6}, {"iron": 7}, {"iron": 10, "gold": 2}])
 upgrade_currency_costs = Array[int]([100, 200, 340, 560])
-capacity_by_level = Array[int]([3, 5, 7, 9, 12])
+capacity_by_level = Array[int]([5, 7, 9, 11, 13])

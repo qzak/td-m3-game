@@ -63,7 +63,7 @@ func _build_rows() -> void:
 
 		var button := Button.new()
 		button.text = "Craft"
-		button.disabled = locked or _inventory_full() or not _has_materials(def)
+		button.disabled = locked or _inventory_full(def_id) or not _has_materials(def)
 		button.pressed.connect(_on_craft_pressed.bind(def_id))
 		row.add_child(button)
 
@@ -89,9 +89,9 @@ func _recipe_cost_text(def: ItemData) -> String:
 		parts.append("%dx %s" % [def.recipe_materials[material_id], material_id])
 	return ", ".join(parts)
 
-## True when the Armoury is already at its owned-items capacity.
-func _inventory_full() -> bool:
-	return GameState.owned_items.size() >= GameState.capacity_for("armoury")
+## True when no valid storage cell exists for this recipe's footprint.
+func _inventory_full(def_id: String) -> bool:
+	return not GameState.has_armoury_storage_space_for(def_id)
 
 ## True when GameState.materials can cover every material this recipe requires.
 func _has_materials(def: ItemData) -> bool:

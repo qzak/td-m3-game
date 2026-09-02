@@ -335,7 +335,7 @@ The Berserker still has the slowest charge (lowest `attack_regen`) among recruit
   [docs/systems/castle.md](castle.md#armoury)) apply their stat bonuses the moment a battle's
   placement buttons are built, not when they're equipped — `TDBattleController._build_placement_buttons()`
   looks up each roster `def_id`'s `GameState.owned_adventurers` entry, resolves its
-  `equipped.weapon`/`equipped.armour` instance ids through `GameState.owned_items` to their
+  `equipped` slot-map instance ids through `GameState.owned_items` to their
   `ItemData` defs, sums `damage_bonus`/`range_bonus`/`attack_pool_bonus`/`attack_regen_bonus`
   across whichever are equipped, and applies them to a `def.duplicate()` copy of the base
   `AdventurerData` (`damage_min`/`damage_max` both get `damage_bonus`, `range_max` gets

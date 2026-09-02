@@ -210,7 +210,8 @@ func _build_placement_buttons() -> void:
 		var attack_regen_bonus: int = 0
 		if not owned_entry.is_empty():
 			var equipped: Dictionary = owned_entry["equipped"]
-			for item_instance_id in [equipped.get("weapon", ""), equipped.get("armour", "")]:
+			for slot_id in equipped:
+				var item_instance_id := str(equipped.get(slot_id, ""))
 				if item_instance_id == "":
 					continue
 				var item_entry: Dictionary = {}

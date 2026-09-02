@@ -17,6 +17,9 @@ func _ready() -> void:
 	EventBus.mine_match_resolved.connect(func(_id, _amount): save_game())
 	EventBus.mine_depth_changed.connect(func(_depth): save_game())
 	EventBus.progression_changed.connect(func(_reason): save_game())
+	EventBus.item_crafted.connect(func(_def_id): save_game())
+	EventBus.item_equipped.connect(func(_adv_id, _item_id): save_game())
+	EventBus.item_unequipped.connect(func(_adv_id, _item_id): save_game())
 
 func _notification(what: int) -> void:
 	if not _mobile_runtime:
@@ -69,6 +72,7 @@ func _write_save_data(reason: String) -> bool:
 		"tavern_next_refresh_unix": GameState.tavern_next_refresh_unix,
 		"tavern_reroll_count": GameState.tavern_reroll_count,
 		"smelter_queue": GameState.smelter_queue,
+		"owned_items": GameState.owned_items,
 		"unlocked_day_index": GameState.unlocked_day_index,
 		"last_day_result": GameState.last_day_result,
 		"mine_depth": GameState.mine_depth,
@@ -115,6 +119,7 @@ func load_game() -> bool:
 	GameState.tavern_next_refresh_unix = parsed.get("tavern_next_refresh_unix", 0)
 	GameState.tavern_reroll_count = parsed.get("tavern_reroll_count", 0)
 	GameState.smelter_queue = parsed.get("smelter_queue", [])
+	GameState.owned_items = parsed.get("owned_items", [])
 	GameState.unlocked_day_index = parsed.get("unlocked_day_index", 1)
 	GameState.last_day_result = parsed.get("last_day_result", {})
 	GameState.mine_depth = parsed.get("mine_depth", 0)
@@ -127,4 +132,5 @@ func load_game() -> bool:
 		GameState.gate_states[key] = loaded_gate_states[key]
 	GameState.dynamite_count = parsed.get("dynamite_count", 0)
 	GameState.shovel_unlocked = parsed.get("shovel_unlocked", false)
+	GameState.normalize_armoury_state()
 	return true

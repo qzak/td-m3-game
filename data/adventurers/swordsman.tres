@@ -8,6 +8,7 @@ id = "swordsman"
 display_name = "The Swordsman"
 rarity = 1
 type = 0
+equipment_slots = Array[String](["weapon", "armour"])
 damage_min = 3
 damage_max = 6
 range_min = 1

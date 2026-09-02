@@ -9,6 +9,10 @@ enum AdventurerType { PHYSICAL_MELEE, PHYSICAL_RANGED, MAGIC }
 @export var rarity: int = 1
 @export var type: AdventurerType = AdventurerType.PHYSICAL_MELEE
 
+# Per-adventurer equipment slot definitions (string ids). Defaults keep backward-compatibility
+# with a simple "weapon" / "armour" pair.
+@export var equipment_slots: Array[String] = ["weapon", "armour"]
+
 @export var damage_min: int = 1
 @export var damage_max: int = 3
 @export var range_min: int = 1

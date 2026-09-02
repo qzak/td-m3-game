@@ -92,7 +92,8 @@ func _effect_for_level(def: BuildingData, level: int) -> String:
 			var multiplier := _float_for_level(def.smelter_time_multiplier_by_level, level, 1.0)
 			return "Queue %d, smelt time x%.1f" % [slots, multiplier]
 		"armoury":
-			return "Item slots %d" % _int_for_level(def.capacity_by_level, level, 2 + level)
+			var grid_dimension := _int_for_level(def.capacity_by_level, level, 5 + ((level - 1) * 2))
+			return "Grid %dx%d" % [grid_dimension, grid_dimension]
 		"weapon_smith", "armour_smith":
 			return "Unlocks recipes up to Lv%d" % level
 		"workshop":

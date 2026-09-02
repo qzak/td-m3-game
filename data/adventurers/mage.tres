@@ -8,6 +8,7 @@ id = "mage"
 display_name = "The Mage"
 rarity = 1
 type = 2
+equipment_slots = Array[String](["weapon", "armour"])
 damage_min = 4
 damage_max = 8
 range_min = 4

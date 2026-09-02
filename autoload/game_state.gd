@@ -31,7 +31,7 @@ var tavern_reroll_count: int = 0  # resets to 0 each time a Day is played
 
 var smelter_queue: Array = []  # Array[Dictionary] (item_id, complete_unix)
 
-var owned_items: Array = []  # Array[Dictionary] {def_id, instance_id}
+var owned_items: Array = []  # Array[Dictionary] {def_id, instance_id, storage_cell?}
 
 var unlocked_day_index: int = 1
 var selected_day_index: int = 1
@@ -60,6 +60,9 @@ const GATE_ACTIVE := "active"
 const GATE_RESOLVED := "resolved"
 const HARDNESS_B_DEPTH := 5
 const MAGIC_BARRIER_DEPTH := 15
+const LEGACY_DEFAULT_EQUIPMENT_SLOTS: Array[String] = ["weapon", "armour"]
+const ARMOURY_GRID_BASE_SIZE := 5
+const ARMOURY_GRID_SIZE_STEP := 2
 const WORKSHOP_RECIPES := {
 	"dynamite": {
 		"display_name": "Dynamite",
@@ -80,6 +83,7 @@ const WORKSHOP_RECIPES := {
 }
 
 func _ready() -> void:
+	normalize_armoury_state()
 	EventBus.day_started.connect(func(_idx): tavern_reroll_count = 0)
 	EventBus.day_won.connect(_on_day_won)
 
@@ -301,6 +305,195 @@ func capacity_for(building_id: String) -> int:
 		return fallback_capacity
 	return int(_value_for_level(def.capacity_by_level, _level_index(building_id), fallback_capacity))
 
+func armoury_grid_size() -> Vector2i:
+	var level := maxi(1, int(building_levels.get("armoury", 1)))
+	var dimension := ARMOURY_GRID_BASE_SIZE + ARMOURY_GRID_SIZE_STEP * (level - 1)
+	return Vector2i(dimension, dimension)
+
+func has_armoury_storage_space_for(def_id: String) -> bool:
+	var item_def: ItemData = load("res://data/items/%s.tres" % def_id)
+	if item_def == null:
+		return false
+	var free_cell := _find_first_free_storage_cell_for_footprint(_item_footprint(item_def))
+	return free_cell.x >= 0 and free_cell.y >= 0
+
+func equipment_slot_ids_for_adventurer(def_id: String) -> Array[String]:
+	var def: AdventurerData = load("res://data/adventurers/%s.tres" % def_id)
+	if def == null:
+		return LEGACY_DEFAULT_EQUIPMENT_SLOTS.duplicate()
+	var slot_ids: Array[String] = []
+	for raw_slot in def.equipment_slots:
+		var slot_id := str(raw_slot).strip_edges()
+		if slot_id == "" or slot_ids.has(slot_id):
+			continue
+		slot_ids.append(slot_id)
+	if slot_ids.is_empty():
+		return LEGACY_DEFAULT_EQUIPMENT_SLOTS.duplicate()
+	return slot_ids
+
+func normalize_armoury_state() -> void:
+	for adventurer in owned_adventurers:
+		var slot_ids: Array[String] = equipment_slot_ids_for_adventurer(str(adventurer.get("def_id", "")))
+		var legacy_equipped: Dictionary = adventurer.get("equipped", {})
+		var normalized_equipped: Dictionary = {}
+		for slot_id in slot_ids:
+			normalized_equipped[slot_id] = str(legacy_equipped.get(slot_id, ""))
+		adventurer["equipped"] = normalized_equipped
+
+	var equipped_item_ids: Dictionary = {}
+	for adventurer in owned_adventurers:
+		var equipped: Dictionary = adventurer.get("equipped", {})
+		for slot_id in equipped:
+			var item_instance_id := str(equipped[slot_id])
+			if item_instance_id != "":
+				equipped_item_ids[item_instance_id] = true
+
+	for entry in owned_items:
+		var instance_id := str(entry.get("instance_id", ""))
+		if instance_id == "" or equipped_item_ids.get(instance_id, false):
+			entry.erase("storage_cell")
+			continue
+		var cell := _find_first_free_storage_cell(instance_id)
+		if cell.x < 0:
+			entry.erase("storage_cell")
+			continue
+		_set_storage_cell(entry, cell)
+
+func refit_armoury_storage() -> void:
+	var equipped_item_ids: Dictionary = {}
+	for adventurer in owned_adventurers:
+		var equipped: Dictionary = adventurer.get("equipped", {})
+		for slot_id in equipped:
+			var item_instance_id := str(equipped[slot_id])
+			if item_instance_id != "":
+				equipped_item_ids[item_instance_id] = true
+
+	for entry in owned_items:
+		var instance_id := str(entry.get("instance_id", ""))
+		if instance_id == "":
+			continue
+		if equipped_item_ids.get(instance_id, false):
+			entry.erase("storage_cell")
+			continue
+		var current_cell := _storage_cell_for_entry(entry)
+		if current_cell.x >= 0 and can_place_item_in_storage(instance_id, current_cell):
+			continue
+		entry.erase("storage_cell")
+		var new_cell := _find_first_free_storage_cell(instance_id)
+		if new_cell.x >= 0:
+			_set_storage_cell(entry, new_cell)
+
+func _empty_equipped_map_for_def(def_id: String) -> Dictionary:
+	var equipped: Dictionary = {}
+	for slot_id in equipment_slot_ids_for_adventurer(def_id):
+		equipped[slot_id] = ""
+	return equipped
+
+func _item_slot_id(item_def: ItemData) -> String:
+	if item_def == null:
+		return ""
+	return item_def.get_effective_slot_id()
+
+func _item_footprint(item_def: ItemData) -> Vector2i:
+	if item_def == null:
+		return Vector2i(1, 1)
+	return Vector2i(maxi(1, item_def.footprint.x), maxi(1, item_def.footprint.y))
+
+func _storage_cell_for_entry(entry: Dictionary) -> Vector2i:
+	var stored = entry.get("storage_cell", {})
+	if typeof(stored) != TYPE_DICTIONARY:
+		return Vector2i(-1, -1)
+	var x := int(stored.get("x", -1))
+	var y := int(stored.get("y", -1))
+	return Vector2i(x, y)
+
+func _set_storage_cell(entry: Dictionary, cell: Vector2i) -> void:
+	entry["storage_cell"] = {"x": cell.x, "y": cell.y}
+
+func _entry_for_item_instance(item_instance_id: String) -> Dictionary:
+	for entry in owned_items:
+		if str(entry.get("instance_id", "")) == item_instance_id:
+			return entry
+	return {}
+
+func _item_def_for_entry(entry: Dictionary) -> ItemData:
+	return load("res://data/items/%s.tres" % str(entry.get("def_id", ""))) as ItemData
+
+func _item_def_for_instance(item_instance_id: String) -> ItemData:
+	var entry := _entry_for_item_instance(item_instance_id)
+	if entry.is_empty():
+		return null
+	return _item_def_for_entry(entry)
+
+func _find_item_holder(item_instance_id: String) -> Dictionary:
+	for adventurer in owned_adventurers:
+		var equipped: Dictionary = adventurer.get("equipped", {})
+		for slot_id in equipped:
+			if str(equipped[slot_id]) == item_instance_id:
+				return {
+					"adventurer_instance_id": str(adventurer.get("instance_id", "")),
+					"slot_id": str(slot_id),
+				}
+	return {}
+
+func _rect_inside_grid(cell: Vector2i, footprint: Vector2i) -> bool:
+	var grid_size := armoury_grid_size()
+	if cell.x < 0 or cell.y < 0:
+		return false
+	return cell.x + footprint.x <= grid_size.x and cell.y + footprint.y <= grid_size.y
+
+func _rectangles_overlap(a_cell: Vector2i, a_size: Vector2i, b_cell: Vector2i, b_size: Vector2i) -> bool:
+	var a_right := a_cell.x + a_size.x
+	var a_bottom := a_cell.y + a_size.y
+	var b_right := b_cell.x + b_size.x
+	var b_bottom := b_cell.y + b_size.y
+	return a_cell.x < b_right and a_right > b_cell.x and a_cell.y < b_bottom and a_bottom > b_cell.y
+
+func can_place_item_in_storage(item_instance_id: String, cell: Vector2i) -> bool:
+	var entry := _entry_for_item_instance(item_instance_id)
+	if entry.is_empty():
+		return false
+	var item_def := _item_def_for_entry(entry)
+	if item_def == null:
+		return false
+	var footprint := _item_footprint(item_def)
+	return _can_place_footprint_at_cell(footprint, cell, item_instance_id)
+
+func _find_first_free_storage_cell(item_instance_id: String) -> Vector2i:
+	var entry := _entry_for_item_instance(item_instance_id)
+	if entry.is_empty():
+		return Vector2i(-1, -1)
+	var item_def := _item_def_for_entry(entry)
+	if item_def == null:
+		return Vector2i(-1, -1)
+	return _find_first_free_storage_cell_for_footprint(_item_footprint(item_def), item_instance_id)
+
+func _find_first_free_storage_cell_for_footprint(footprint: Vector2i, ignored_item_instance_id: String = "") -> Vector2i:
+	var grid_size := armoury_grid_size()
+	for y in range(0, grid_size.y):
+		for x in range(0, grid_size.x):
+			var probe := Vector2i(x, y)
+			if _can_place_footprint_at_cell(footprint, probe, ignored_item_instance_id):
+				return probe
+	return Vector2i(-1, -1)
+
+func _can_place_footprint_at_cell(footprint: Vector2i, cell: Vector2i, ignored_item_instance_id: String = "") -> bool:
+	if not _rect_inside_grid(cell, footprint):
+		return false
+	for other in owned_items:
+		var other_instance_id := str(other.get("instance_id", ""))
+		if other_instance_id == ignored_item_instance_id:
+			continue
+		var other_cell := _storage_cell_for_entry(other)
+		if other_cell.x < 0:
+			continue
+		var other_def := _item_def_for_entry(other)
+		if other_def == null:
+			continue
+		if _rectangles_overlap(cell, footprint, other_cell, _item_footprint(other_def)):
+			return false
+	return true
+
 func tavern_refresh_interval_seconds() -> int:
 	var fallback_interval: int = 21600
 	var def := _building_def("tavern")
@@ -319,7 +512,7 @@ func recruit_adventurer(def_id: String) -> bool:
 		"def_id": def_id,
 		"instance_id": "%s_%d" % [def_id, Time.get_ticks_usec()],
 		"level": 1,
-		"equipped": {"weapon": "", "armour": ""},
+		"equipped": _empty_equipped_map_for_def(def_id),
 	})
 	EventBus.adventurer_recruited.emit(def_id)
 	return true
@@ -438,63 +631,167 @@ func craft_item(def_id: String) -> bool:
 	var smith_id: String = "weapon_smith" if def.slot == ItemData.ItemSlot.WEAPON else "armour_smith"
 	if building_levels.get(smith_id, 1) < def.required_smith_level:
 		return false
-	if owned_items.size() >= capacity_for("armoury"):
+	var first_cell := _find_first_free_storage_cell_for_footprint(_item_footprint(def))
+	if first_cell.x < 0:
 		return false
+	var next_instance_id := "%s_%d" % [def_id, Time.get_ticks_usec()]
 	for material_id in def.recipe_materials:
 		if materials.get(material_id, 0) < def.recipe_materials[material_id]:
 			return false
 	for material_id in def.recipe_materials:
 		spend_material(material_id, def.recipe_materials[material_id])
-	owned_items.append({
+	var crafted_entry := {
 		"def_id": def_id,
-		"instance_id": "%s_%d" % [def_id, Time.get_ticks_usec()],
-	})
+		"instance_id": next_instance_id,
+	}
+	_set_storage_cell(crafted_entry, first_cell)
+	owned_items.append(crafted_entry)
 	EventBus.item_crafted.emit(def_id)
 	return true
 
-## Equips an owned item instance onto an adventurer, unequipping it from anywhere else first.
-func equip_item(adventurer_instance_id: String, item_instance_id: String) -> bool:
-	var item_entry: Dictionary = {}
-	for entry in owned_items:
-		if entry["instance_id"] == item_instance_id:
-			item_entry = entry
-			break
+func place_item_in_storage(item_instance_id: String, cell: Vector2i) -> bool:
+	var item_entry := _entry_for_item_instance(item_instance_id)
 	if item_entry.is_empty():
 		return false
-	var def: ItemData = load("res://data/items/%s.tres" % item_entry["def_id"])
-	if def == null:
+	var old_cell := _storage_cell_for_entry(item_entry)
+	item_entry.erase("storage_cell")
+	if not can_place_item_in_storage(item_instance_id, cell):
+		if old_cell.x >= 0:
+			_set_storage_cell(item_entry, old_cell)
 		return false
-	var slot_key: String = "weapon" if def.slot == ItemData.ItemSlot.WEAPON else "armour"
-	for adventurer in owned_adventurers:
-		if adventurer["equipped"]["weapon"] == item_instance_id:
-			adventurer["equipped"]["weapon"] = ""
-		if adventurer["equipped"]["armour"] == item_instance_id:
-			adventurer["equipped"]["armour"] = ""
+	var holder := _find_item_holder(item_instance_id)
+	if not holder.is_empty():
+		var holder_adventurer_id := str(holder.get("adventurer_instance_id", ""))
+		var holder_slot_id := str(holder.get("slot_id", ""))
+		for adventurer in owned_adventurers:
+			if str(adventurer.get("instance_id", "")) == holder_adventurer_id:
+				var equipped: Dictionary = adventurer.get("equipped", {})
+				equipped[holder_slot_id] = ""
+				adventurer["equipped"] = equipped
+				EventBus.item_unequipped.emit(holder_adventurer_id, item_instance_id)
+				break
+	_set_storage_cell(item_entry, cell)
+	return true
+
+## Equips an owned item instance onto an adventurer slot, unequipping it from anywhere else first.
+func equip_item_to_slot(adventurer_instance_id: String, item_instance_id: String, slot_id: String) -> bool:
+	var item_entry := _entry_for_item_instance(item_instance_id)
+	if item_entry.is_empty():
+		return false
+	var item_def := _item_def_for_entry(item_entry)
+	if item_def == null:
+		return false
+	if _item_slot_id(item_def) != slot_id:
+		return false
+
 	var target_adventurer: Dictionary = {}
 	for adventurer in owned_adventurers:
-		if adventurer["instance_id"] == adventurer_instance_id:
+		if str(adventurer.get("instance_id", "")) == adventurer_instance_id:
 			target_adventurer = adventurer
 			break
 	if target_adventurer.is_empty():
 		return false
-	target_adventurer["equipped"][slot_key] = item_instance_id
+
+	var allowed_slots := equipment_slot_ids_for_adventurer(str(target_adventurer.get("def_id", "")))
+	if not allowed_slots.has(slot_id):
+		return false
+	var target_equipped: Dictionary = target_adventurer.get("equipped", {})
+	if not target_equipped.has(slot_id):
+		target_equipped[slot_id] = ""
+
+	var incoming_storage_cell := _storage_cell_for_entry(item_entry)
+	var incoming_was_in_storage := incoming_storage_cell.x >= 0 and incoming_storage_cell.y >= 0
+	if incoming_was_in_storage:
+		item_entry.erase("storage_cell")
+
+	var displaced_item_id := str(target_equipped.get(slot_id, ""))
+	if displaced_item_id != "" and displaced_item_id != item_instance_id:
+		var displaced_cell := _find_first_free_storage_cell(displaced_item_id)
+		if displaced_cell.x < 0:
+			if incoming_was_in_storage:
+				_set_storage_cell(item_entry, incoming_storage_cell)
+			return false
+		var displaced_entry := _entry_for_item_instance(displaced_item_id)
+		if displaced_entry.is_empty():
+			if incoming_was_in_storage:
+				_set_storage_cell(item_entry, incoming_storage_cell)
+			return false
+		_set_storage_cell(displaced_entry, displaced_cell)
+		EventBus.item_unequipped.emit(adventurer_instance_id, displaced_item_id)
+
+	var previous_holder := _find_item_holder(item_instance_id)
+	if not previous_holder.is_empty():
+		var previous_adventurer_id := str(previous_holder.get("adventurer_instance_id", ""))
+		var previous_slot_id := str(previous_holder.get("slot_id", ""))
+		for adventurer in owned_adventurers:
+			if str(adventurer.get("instance_id", "")) != previous_adventurer_id:
+				continue
+			var equipped: Dictionary = adventurer.get("equipped", {})
+			equipped[previous_slot_id] = ""
+			adventurer["equipped"] = equipped
+			break
+
+	item_entry.erase("storage_cell")
+	target_equipped[slot_id] = item_instance_id
+	target_adventurer["equipped"] = target_equipped
 	EventBus.item_equipped.emit(adventurer_instance_id, item_instance_id)
 	return true
 
-## Clears whatever item is equipped in the given slot ("weapon" or "armour") for an adventurer.
-func unequip_item(adventurer_instance_id: String, slot: String) -> bool:
-	if slot != "weapon" and slot != "armour":
+## Equips an owned item instance using its default slot id.
+func equip_item(adventurer_instance_id: String, item_instance_id: String) -> bool:
+	var item_def := _item_def_for_instance(item_instance_id)
+	if item_def == null:
 		return false
+	return equip_item_to_slot(adventurer_instance_id, item_instance_id, _item_slot_id(item_def))
+
+func unequip_item_to_storage_cell(adventurer_instance_id: String, slot: String, cell: Vector2i) -> bool:
 	var target_adventurer: Dictionary = {}
 	for adventurer in owned_adventurers:
-		if adventurer["instance_id"] == adventurer_instance_id:
+		if str(adventurer.get("instance_id", "")) == adventurer_instance_id:
 			target_adventurer = adventurer
 			break
 	if target_adventurer.is_empty():
 		return false
-	var item_instance_id: String = target_adventurer["equipped"][slot]
+	var equipped: Dictionary = target_adventurer.get("equipped", {})
+	if not equipped.has(slot):
+		return false
+	var item_instance_id := str(equipped.get(slot, ""))
 	if item_instance_id == "":
 		return false
-	target_adventurer["equipped"][slot] = ""
+	if not can_place_item_in_storage(item_instance_id, cell):
+		return false
+	equipped[slot] = ""
+	target_adventurer["equipped"] = equipped
+	var item_entry := _entry_for_item_instance(item_instance_id)
+	if item_entry.is_empty():
+		return false
+	_set_storage_cell(item_entry, cell)
+	EventBus.item_unequipped.emit(adventurer_instance_id, item_instance_id)
+	return true
+
+## Clears whatever item is equipped in the given slot and places it in first available storage cell.
+func unequip_item(adventurer_instance_id: String, slot: String) -> bool:
+	var target_adventurer: Dictionary = {}
+	for adventurer in owned_adventurers:
+		if str(adventurer.get("instance_id", "")) == adventurer_instance_id:
+			target_adventurer = adventurer
+			break
+	if target_adventurer.is_empty():
+		return false
+	var equipped: Dictionary = target_adventurer.get("equipped", {})
+	if not equipped.has(slot):
+		return false
+	var item_instance_id := str(equipped.get(slot, ""))
+	if item_instance_id == "":
+		return false
+	var first_cell := _find_first_free_storage_cell(item_instance_id)
+	if first_cell.x < 0:
+		return false
+	equipped[slot] = ""
+	target_adventurer["equipped"] = equipped
+	var item_entry := _entry_for_item_instance(item_instance_id)
+	if item_entry.is_empty():
+		return false
+	_set_storage_cell(item_entry, first_cell)
 	EventBus.item_unequipped.emit(adventurer_instance_id, item_instance_id)
 	return true

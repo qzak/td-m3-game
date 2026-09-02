@@ -206,17 +206,32 @@ alongside code changes so it stays a reliable reference. See
 
 - Lists every entry in `GameState.owned_items` alongside the current active roster
   (`GameState.active_roster_ids`), and is the only place items get equipped/unequipped.
-- Each owned item's row shows one "→ <adventurer>" button per active-roster adventurer (skipped if
-  that adventurer already has that exact item in the matching slot); pressing it calls
-  `GameState.equip_item(adventurer_instance_id, item_instance_id)`.
-- Each adventurer's row shows their currently-equipped weapon/armour names plus "Unequip Weapon"/
-  "Unequip Armour" buttons (disabled when that slot is already empty), calling
-  `GameState.unequip_item(adventurer_instance_id, slot)`.
-- `owned_adventurers[i].equipped` is `{"weapon": "", "armour": ""}` (values are `owned_items[].instance_id`,
-  empty string = none). `GameState.equip_item()` first clears the item from wherever else it might be
-  equipped (an item can only be on one adventurer at a time), then sets the target slot — it does not
-  auto-unequip whatever was previously in that slot on the target adventurer other than by being
-  overwritten, so the previous item just becomes unequipped-but-still-owned, not lost.
+- Armoury now renders a level-scaled square storage grid and a selected-adventurer slot panel:
+  - Armoury Level 1 starts at `5 x 5`.
+  - Each Armoury upgrade increases both dimensions by `+2` (`7x7`, `9x9`, `11x11`, `13x13`).
+  - While the Armoury panel is open, upgrading the building updates the visible grid size immediately.
+  - Storage items are shown at their persisted grid cells.
+  - Equipped items are removed from storage and shown only in slot cards.
+  - Drag from storage item -> slot card to equip.
+  - Drag from equipped item -> storage grid to unequip to a chosen cell.
+  - Dragging over storage highlights the item's full footprint green for a valid target or red for
+    an invalid one, accounting for the cell grabbed from a stored item.
+- Hovering an item (or tapping it on touch devices) shows a detail tooltip beside the cursor or
+  touch point with slot, footprint, and bonus stats; it hides when the hover ends.
+- During a drag, the source item is hidden and its drag preview represents the picked-up item;
+  source visibility is restored after a drop or cancelled drag.
+- Item size and compatibility are data-driven:
+  - `ItemData.footprint` controls grid width/height in cells.
+  - Current content standardization: armour recipes use `2x2`; weapon recipes scale by expected size
+    (e.g. `3x1`, `4x1`, `4x2` across the current weapon tier set).
+  - `ItemData.slot_id` (with legacy enum fallback) controls which slot the item can be dropped onto.
+  - `AdventurerData.equipment_slots` defines each adventurer's available slot IDs.
+- `owned_adventurers[i].equipped` is now a slot-id dictionary (key = slot id, value = `owned_items[].instance_id`
+  or empty string). `GameState.equip_item_to_slot()` enforces slot compatibility, guarantees one item
+  is equipped in at most one slot globally, and if it replaces an existing equipped item it attempts
+  to return that displaced item to the first free storage position.
+- Save migration keeps older `{"weapon": "", "armour": ""}` entries compatible by normalizing equipped maps
+  against the current `AdventurerData.equipment_slots` shape on load.
 - Same one-instance-per-`def_id` simplification as elsewhere in this codebase: equip lookups resolve
   an adventurer `def_id` to its `owned_adventurers` entry by taking the first match.
 - Equipped bonuses (`damage_bonus`/`range_bonus`/`attack_pool_bonus`/`attack_regen_bonus` from
@@ -228,5 +243,6 @@ alongside code changes so it stays a reliable reference. See
 - Tavern's catalog now has 6 types, but it still shows only 3 contracts at tavern level 1; upgrading
   the Tavern increases simultaneous visible contracts and makes targeted recruiting easier.
 - No item rarity/tier visuals yet — the Smiths only gate crafting by `required_smith_level`, and the
-  Armoury only shows item names, not rarity.
-- Only one weapon + one armour slot per adventurer; no accessory/trinket slot yet.
+  Armoury uses simple type icons (weapon/armour silhouettes) without rarity framing.
+- UI layout for the armoury grid is functional-first and does not yet have icon art, rarity frames, or
+  advanced drag preview polish.

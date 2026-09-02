@@ -9,6 +9,7 @@ id = "pikeman"
 display_name = "The Pikeman"
 rarity = 2
 type = 0
+equipment_slots = Array[String](["weapon", "armour"])
 damage_min = 5
 damage_max = 9
 range_min = 1

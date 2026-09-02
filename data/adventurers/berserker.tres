@@ -9,6 +9,7 @@ id = "berserker"
 display_name = "The Berserker"
 rarity = 2
 type = 0
+equipment_slots = Array[String](["weapon", "armour"])
 damage_min = 8
 damage_max = 14
 range_min = 1
