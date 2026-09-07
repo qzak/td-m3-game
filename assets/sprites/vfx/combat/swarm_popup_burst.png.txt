@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=swarm_popup_burst.png
+category=vfx/combat
+notes=Replace this file with final pixel-art sprite export when ready.

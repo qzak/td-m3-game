@@ -1,6 +1,8 @@
 extends PanelContainer
 class_name ArmouryDragItem
 
+const ITEM_ICON_ROOT := "res://assets/sprites/items"
+
 signal item_hovered(payload: Dictionary, location: Vector2)
 signal item_unhovered()
 signal item_tapped(payload: Dictionary, location: Vector2)
@@ -25,9 +27,10 @@ func _rebuild() -> void:
 	var icon := TextureRect.new()
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	icon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	icon.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	icon.texture = _build_icon_texture(str(drag_payload.get("icon_kind", "item")))
+	icon.texture = _build_texture_for_payload(drag_payload)
 	add_child(icon)
 
 func _get_drag_data(at_position: Vector2) -> Variant:
@@ -56,9 +59,10 @@ func _get_drag_data(at_position: Vector2) -> Variant:
 	var icon := TextureRect.new()
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	icon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	icon.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	icon.texture = _build_icon_texture(str(payload.get("icon_kind", "item")))
+	icon.texture = _build_texture_for_payload(payload)
 	preview.add_child(icon)
 	drag_preview.add_child(preview)
 	drag_preview.tree_exiting.connect(func():
@@ -96,6 +100,16 @@ func _build_icon_texture(icon_kind: String) -> Texture2D:
 			_fill_rect(image, Rect2i(5, 11, 14, 2), stroke)
 			_fill_rect(image, Rect2i(11, 5, 2, 14), stroke)
 	return ImageTexture.create_from_image(image)
+
+func _build_texture_for_payload(payload: Dictionary) -> Texture2D:
+	var icon_id := str(payload.get("icon_id", "")).strip_edges()
+	var icon_kind := str(payload.get("icon_kind", "item"))
+	if icon_id != "":
+		var folder := "weapons" if icon_kind == "weapon" else "armour"
+		var candidate := "%s/%s/%s_icon.png" % [ITEM_ICON_ROOT, folder, icon_id]
+		if ResourceLoader.exists(candidate):
+			return load(candidate) as Texture2D
+	return _build_icon_texture(icon_kind)
 
 func _fill_rect(image: Image, rect: Rect2i, color: Color) -> void:
 	for y in range(rect.position.y, rect.position.y + rect.size.y):

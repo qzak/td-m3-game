@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=castle_gate_marker.png
+category=tower_defense/backgrounds
+notes=Replace this file with final pixel-art sprite export when ready.

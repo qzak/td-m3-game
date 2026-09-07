@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=mage_death.png
+category=tower_defense/adventurers/mage
+notes=Replace this file with final pixel-art sprite export when ready.

@@ -147,6 +147,7 @@ func _build_slot_list(adventurer_instance_id: String) -> void:
 			drag_item.configure({
 				"kind": "armoury_item",
 				"item_instance_id": equipped_instance_id,
+				"icon_id": def.id if def != null else "",
 				"source_kind": "slot",
 				"source_adventurer_instance_id": adventurer_instance_id,
 				"source_slot_id": slot_id,
@@ -178,6 +179,7 @@ func _build_inventory_items() -> void:
 		item_node.configure({
 			"kind": "armoury_item",
 			"item_instance_id": str(entry.get("instance_id", "")),
+			"icon_id": def.id,
 			"source_kind": "grid",
 			"source_cell": cell,
 			"cell_size": cell_size,

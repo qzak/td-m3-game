@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=rooted_stone_tile.png
+category=match3/tiles
+notes=Replace this file with final pixel-art sprite export when ready.

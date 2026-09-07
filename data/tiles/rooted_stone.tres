@@ -7,5 +7,5 @@ script = ExtResource("1")
 id = "rooted_stone"
 display_name = "Rooted Stone"
 is_garbage = true
-depth_required = 2
+depth_required = 10
 immovable = true

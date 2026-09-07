@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=armour_break_status_icon.png
+category=vfx/status
+notes=Replace this file with final pixel-art sprite export when ready.

@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=pikeman_hit.png
+category=tower_defense/adventurers/pikeman
+notes=Replace this file with final pixel-art sprite export when ready.

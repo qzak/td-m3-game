@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=elder_wyrm_death.png
+category=tower_defense/enemies/elder_wyrm
+notes=Replace this file with final pixel-art sprite export when ready.

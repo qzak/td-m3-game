@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=castle_hub_day.png
+category=castle/backgrounds
+notes=Replace this file with final pixel-art sprite export when ready.

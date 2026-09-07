@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=ranged_impact.png
+category=vfx/combat
+notes=Replace this file with final pixel-art sprite export when ready.

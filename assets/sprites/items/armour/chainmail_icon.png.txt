@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=chainmail_icon.png
+category=items/armour
+notes=Replace this file with final pixel-art sprite export when ready.

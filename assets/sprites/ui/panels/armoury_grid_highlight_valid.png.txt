@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=armoury_grid_highlight_valid.png
+category=ui/panels
+notes=Replace this file with final pixel-art sprite export when ready.

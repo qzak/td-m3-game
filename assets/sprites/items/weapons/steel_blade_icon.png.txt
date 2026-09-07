@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=steel_blade_icon.png
+category=items/weapons
+notes=Replace this file with final pixel-art sprite export when ready.

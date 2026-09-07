@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=frost_sigil_impact.png
+category=vfx/spells
+notes=Replace this file with final pixel-art sprite export when ready.

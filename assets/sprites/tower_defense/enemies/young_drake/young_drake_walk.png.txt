@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=young_drake_walk.png
+category=tower_defense/enemies/young_drake
+notes=Replace this file with final pixel-art sprite export when ready.

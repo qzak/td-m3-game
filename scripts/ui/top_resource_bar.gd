@@ -28,6 +28,8 @@ const CONTEXT_ORDER := {
 	"mine": ["gold", "iron", "copper", "currency"],
 	"smith": ["refined_iron", "refined_copper", "refined_gold", "volatile_core", "currency", "iron", "copper", "gold"],
 }
+const ICON_ROOT := "res://assets/sprites/ui/resource_icons"
+const BATTLE_ICON_ROOT := "res://assets/sprites/ui/battle_icons"
 
 @onready var context_label: Label = $Panel/Margin/ContentRow/ContextLabel
 @onready var chips: HBoxContainer = $Panel/Margin/ContentRow/Chips
@@ -75,11 +77,14 @@ func _build_chips() -> void:
 		row.add_theme_constant_override("separation", 6)
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-		var swatch := ColorRect.new()
-		swatch.custom_minimum_size = Vector2(14, 14)
-		swatch.color = def["swatch"]
-		swatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(swatch)
+		var icon := TextureRect.new()
+		icon.custom_minimum_size = Vector2(14, 14)
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon.texture = _resolve_icon_texture(def)
+		row.add_child(icon)
 
 		var label := Label.new()
 		label.text = "%s: 0" % def["label"]
@@ -88,7 +93,7 @@ func _build_chips() -> void:
 		row.add_child(label)
 
 		chips.add_child(row)
-		_chip_rows[def["id"]] = {"row": row, "label": label, "swatch": swatch}
+		_chip_rows[def["id"]] = {"row": row, "label": label, "icon": icon}
 
 func _on_resized() -> void:
 	_refresh_visibility()
@@ -167,11 +172,11 @@ func _apply_primary_style(primary_id: String) -> void:
 		var chip_entry: Dictionary = _chip_rows[entry_id]
 		var row: HBoxContainer = chip_entry["row"]
 		var label: Label = chip_entry["label"]
-		var swatch: ColorRect = chip_entry["swatch"]
+		var icon: TextureRect = chip_entry["icon"]
 		var is_primary: bool = entry_id == primary_id and row.visible
 		label.add_theme_font_size_override("font_size", 18 if is_primary else 16)
 		label.add_theme_color_override("font_color", Color("ffffff") if is_primary else Color("d7dcd8"))
-		swatch.custom_minimum_size = Vector2(18, 18) if is_primary else Vector2(14, 14)
+		icon.custom_minimum_size = Vector2(18, 18) if is_primary else Vector2(14, 14)
 		row.modulate = Color("ffffff") if is_primary else Color("e6ece8")
 
 func _is_visible_in_context(def: Dictionary) -> bool:
@@ -198,3 +203,45 @@ func _set_mouse_passthrough(root: Control) -> void:
 	for child in root.get_children():
 		if child is Control:
 			_set_mouse_passthrough(child)
+
+func _resolve_icon_texture(def: Dictionary) -> Texture2D:
+	var entry_id := str(def.get("id", ""))
+	var explicit_file := _icon_filename_for(entry_id)
+	if explicit_file != "":
+		var path := "%s/%s" % [BATTLE_ICON_ROOT if entry_id.begins_with("battle_") else ICON_ROOT, explicit_file]
+		if ResourceLoader.exists(path):
+			return load(path) as Texture2D
+	var swatch: Color = def.get("swatch", Color.WHITE)
+	return _solid_icon_texture(swatch)
+
+func _icon_filename_for(entry_id: String) -> String:
+	match entry_id:
+		"battle_wave":
+			return "wave_icon.png"
+		"battle_upcoming":
+			return "upcoming_icon.png"
+		"battle_drops":
+			return "drops_icon.png"
+		"currency":
+			return "coins_icon.png"
+		"copper":
+			return "copper_icon.png"
+		"iron":
+			return "iron_icon.png"
+		"gold":
+			return "gold_ore_icon.png"
+		"volatile_core":
+			return "volatile_core_icon.png"
+		"refined_copper":
+			return "refined_copper_icon.png"
+		"refined_iron":
+			return "refined_iron_icon.png"
+		"refined_gold":
+			return "refined_gold_icon.png"
+		_:
+			return ""
+
+func _solid_icon_texture(color: Color) -> Texture2D:
+	var image := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	image.fill(color)
+	return ImageTexture.create_from_image(image)

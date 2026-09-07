@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=touch_target_outline.png
+category=match3/board
+notes=Replace this file with final pixel-art sprite export when ready.

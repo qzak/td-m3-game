@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=slow_armour_break_combo_icon.png
+category=vfx/status
+notes=Replace this file with final pixel-art sprite export when ready.

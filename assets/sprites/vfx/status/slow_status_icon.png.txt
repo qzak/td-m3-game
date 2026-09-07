@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=slow_status_icon.png
+category=vfx/status
+notes=Replace this file with final pixel-art sprite export when ready.

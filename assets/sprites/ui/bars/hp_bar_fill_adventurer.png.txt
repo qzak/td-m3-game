@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=hp_bar_fill_adventurer.png
+category=ui/bars
+notes=Replace this file with final pixel-art sprite export when ready.

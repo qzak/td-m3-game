@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=tower_idle.png
+category=tower_defense/adventurers/tower
+notes=Replace this file with final pixel-art sprite export when ready.

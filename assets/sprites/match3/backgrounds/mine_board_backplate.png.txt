@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=mine_board_backplate.png
+category=match3/backgrounds
+notes=Replace this file with final pixel-art sprite export when ready.

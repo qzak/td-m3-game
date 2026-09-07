@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=mage_attack.png
+category=tower_defense/adventurers/mage
+notes=Replace this file with final pixel-art sprite export when ready.

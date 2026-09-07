@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=button_pressed.png
+category=ui/buttons
+notes=Replace this file with final pixel-art sprite export when ready.

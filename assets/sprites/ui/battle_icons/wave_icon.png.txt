@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=wave_icon.png
+category=ui/battle_icons
+notes=Replace this file with final pixel-art sprite export when ready.

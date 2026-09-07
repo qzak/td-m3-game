@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=war_room_panel_banner.png
+category=castle/buildings/panels
+notes=Replace this file with final pixel-art sprite export when ready.

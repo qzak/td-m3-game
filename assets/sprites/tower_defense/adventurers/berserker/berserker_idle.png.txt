@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=berserker_idle.png
+category=tower_defense/adventurers/berserker
+notes=Replace this file with final pixel-art sprite export when ready.

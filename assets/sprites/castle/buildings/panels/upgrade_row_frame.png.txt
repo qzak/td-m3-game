@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=upgrade_row_frame.png
+category=castle/buildings/panels
+notes=Replace this file with final pixel-art sprite export when ready.

@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=dynamite_icon.png
+category=items/tools
+notes=Replace this file with final pixel-art sprite export when ready.

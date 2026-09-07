@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=range_preview_fill.png
+category=tower_defense/grid
+notes=Replace this file with final pixel-art sprite export when ready.

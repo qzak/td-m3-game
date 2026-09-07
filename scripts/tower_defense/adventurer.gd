@@ -4,6 +4,7 @@ class_name TDAdventurer
 
 const PROJECTILE_MIN_DURATION: float = 0.08
 const PROJECTILE_SPEED: float = 480.0
+const ADVENTURER_SPRITE_ROOT := "res://assets/sprites/tower_defense/adventurers"
 
 var data: AdventurerData
 var cell: Vector2i
@@ -13,6 +14,7 @@ var selected_spell_id: String = ""  # chosen spell for MAGIC units; "" = use the
 var current_health: int = 1
 
 @onready var body: Polygon2D = $Body
+@onready var sprite: Sprite2D = $Sprite
 @onready var hp_bar: WorldStatBar = $HPBar
 @onready var action_meter: AdventurerActionMeter = $ActionMeter
 
@@ -26,6 +28,7 @@ func setup(p_data: AdventurerData, p_cell: Vector2i, world_pos: Vector2, p_spell
 	selected_spell_id = p_spell_id
 	if selected_spell_id == "" and not data.spell_ids.is_empty():
 		selected_spell_id = data.spell_ids[0]
+	_apply_sprite()
 	_update_overlay()
 
 ## Repositions the unit to a new cell without touching its charge/stun state
@@ -90,9 +93,10 @@ func play_melee_attack(target_position: Vector2) -> void:
 	swing_tween.tween_property(self, "rotation", 0.0, 0.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	_spawn_impact(target_position, Color(1.0, 0.45, 0.25, 0.95))
 	if body:
+		var squash_target: Node2D = sprite if sprite != null and sprite.visible else body
 		var body_tween := create_tween()
-		body_tween.tween_property(body, "scale", Vector2(1.12, 0.88), 0.08).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		body_tween.tween_property(body, "scale", Vector2(1.0, 1.0), 0.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		body_tween.tween_property(squash_target, "scale", Vector2(1.12, 0.88), 0.08).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		body_tween.tween_property(squash_target, "scale", Vector2(1.0, 1.0), 0.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 
 func _spawn_impact(target_position: Vector2, color: Color) -> void:
 	var host := get_parent()
@@ -132,3 +136,28 @@ func _update_overlay() -> void:
 		partial_fill = float(attack_pool_current % action_cost) / float(action_cost)
 	action_meter.set_capacity(capacity)
 	action_meter.set_state(full_actions, partial_fill, stunned_steps_remaining > 0)
+
+func _apply_sprite() -> void:
+	if sprite == null or body == null or data == null:
+		return
+	var texture := _resolve_sprite_texture()
+	if texture == null:
+		sprite.visible = false
+		body.visible = true
+		return
+	sprite.texture = texture
+	sprite.centered = true
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.visible = true
+	body.visible = false
+
+func _resolve_sprite_texture() -> Texture2D:
+	if data.sprite != null:
+		return data.sprite
+	var sprite_id := data.id
+	if sprite_id.begins_with("tower_"):
+		sprite_id = "tower"
+	var candidate := "%s/%s/%s_idle.png" % [ADVENTURER_SPRITE_ROOT, sprite_id, sprite_id]
+	if ResourceLoader.exists(candidate):
+		return load(candidate) as Texture2D
+	return null

@@ -2,6 +2,8 @@ extends Node2D
 class_name CastleController
 ## Hub scene: load the save, and switch between Tavern/Quarters panels or start a Day.
 
+const CASTLE_BUTTON_ICON_ROOT := "res://assets/sprites/castle/buildings/buttons"
+
 @onready var tavern_panel: TavernController = $UI/HUD/SafeArea/MainColumns/PanelHost/TavernPanel
 @onready var quarters_panel: QuartersController = $UI/HUD/SafeArea/MainColumns/PanelHost/QuartersPanel
 @onready var smelter_panel: SmelterController = $UI/HUD/SafeArea/MainColumns/PanelHost/SmelterPanel
@@ -58,6 +60,7 @@ func _ready() -> void:
 	close_panel_button.pressed.connect(func(): _show_panel(null))
 	war_room_panel.day_start_requested.connect(_on_start_day_pressed)
 	EventBus.progression_changed.connect(func(_reason): _refresh_progression_ui())
+	_apply_button_icons()
 
 	_show_panel(null)
 	_refresh_progression_ui()
@@ -131,3 +134,23 @@ func _refresh_progression_ui() -> void:
 	else:
 		mine_button.text = "Enter Mine (Win Day 1)"
 		mine_button.disabled = true
+
+func _apply_button_icons() -> void:
+	_set_button_icon_if_exists(tavern_button, "tavern_button_icon.png")
+	_set_button_icon_if_exists(quarters_button, "quarters_button_icon.png")
+	_set_button_icon_if_exists(smelter_button, "smelter_button_icon.png")
+	_set_button_icon_if_exists(weapon_smith_button, "weapon_smith_button_icon.png")
+	_set_button_icon_if_exists(armour_smith_button, "armour_smith_button_icon.png")
+	_set_button_icon_if_exists(armoury_button, "armoury_button_icon.png")
+	_set_button_icon_if_exists(towers_button, "towers_button_icon.png")
+	_set_button_icon_if_exists(war_room_button, "war_room_button_icon.png")
+	_set_button_icon_if_exists(workshop_button, "workshop_button_icon.png")
+	_set_button_icon_if_exists(library_button, "library_button_icon.png")
+	_set_button_icon_if_exists(mine_button, "mine_button_icon.png")
+	_set_button_icon_if_exists(close_panel_button, "back_button_icon.png")
+
+func _set_button_icon_if_exists(button: Button, file_name: String) -> void:
+	var path := "%s/%s" % [CASTLE_BUTTON_ICON_ROOT, file_name]
+	if not ResourceLoader.exists(path):
+		return
+	button.icon = load(path) as Texture2D

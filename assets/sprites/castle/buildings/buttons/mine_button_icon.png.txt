@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=mine_button_icon.png
+category=castle/buildings/buttons
+notes=Replace this file with final pixel-art sprite export when ready.

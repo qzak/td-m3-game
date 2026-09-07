@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=war_drake_walk.png
+category=tower_defense/enemies/war_drake
+notes=Replace this file with final pixel-art sprite export when ready.

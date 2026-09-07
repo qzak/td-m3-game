@@ -4,6 +4,7 @@ class_name TDEnemy
 
 const HOP_DURATION: float = 0.22
 const HOP_HEIGHT: float = 10.0
+const ENEMY_SPRITE_ROOT := "res://assets/sprites/tower_defense/enemies"
 const STATUS_COLOR_SLOW := Color(0.55, 0.78, 1.0, 1.0)
 const STATUS_COLOR_BREAK := Color(1.0, 0.68, 0.52, 1.0)
 const STATUS_COLOR_MIXED := Color(0.86, 0.72, 0.98, 1.0)
@@ -22,6 +23,7 @@ var armour_break_amount: int = 0
 var dying: bool = false
 
 @onready var body: Polygon2D = $Body
+@onready var sprite: Sprite2D = $Sprite
 @onready var hp_bar: WorldStatBar = $HPBar
 @onready var status_label: Label = $StatusLabel
 
@@ -38,6 +40,7 @@ func setup(p_data: EnemyData, p_grid: TDGridMap, health_multiplier: float = 1.0)
 	armour_break_amount = 0
 	current_cell = grid.path_cells[0]
 	position = grid.cell_to_world(current_cell)
+	_apply_sprite()
 	_update_hp_bar()
 	_update_status_label()
 
@@ -127,10 +130,11 @@ func play_anti_swarm_cue(multiplier: float) -> void:
 	if dying or multiplier <= 1.0:
 		return
 	if body:
+		var pulse_target: Node2D = sprite if sprite != null and sprite.visible else body
 		var pulse := create_tween()
 		pulse.set_parallel(true)
-		pulse.tween_property(body, "scale", Vector2(1.22, 1.22), 0.08).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		pulse.tween_property(body, "scale", Vector2(1.0, 1.0), 0.12).set_delay(0.08).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		pulse.tween_property(pulse_target, "scale", Vector2(1.22, 1.22), 0.08).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		pulse.tween_property(pulse_target, "scale", Vector2(1.0, 1.0), 0.12).set_delay(0.08).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	_show_popup("SWARM x%.2f" % multiplier, Color(1.0, 0.9, 0.45, 0.95))
 
 func play_death_animation() -> void:
@@ -162,6 +166,8 @@ func _update_status_label() -> void:
 		status_label.visible = false
 		if body:
 			body.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		if sprite:
+			sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
 		return
 	status_label.visible = true
 	var chunks: Array[String] = []
@@ -177,6 +183,13 @@ func _update_status_label() -> void:
 			body.modulate = STATUS_COLOR_SLOW
 		else:
 			body.modulate = STATUS_COLOR_BREAK
+	if sprite:
+		if has_slow and has_break:
+			sprite.modulate = STATUS_COLOR_MIXED
+		elif has_slow:
+			sprite.modulate = STATUS_COLOR_SLOW
+		else:
+			sprite.modulate = STATUS_COLOR_BREAK
 
 func _effective_move_period() -> int:
 	var slow_bonus := slow_move_period_bonus if slow_steps_remaining > 0 else 0
@@ -199,8 +212,10 @@ func _animate_hop(from_position: Vector2, to_position: Vector2) -> void:
 	if body:
 		body.scale = Vector2(1.0, 1.0)
 		var squash := create_tween()
-		squash.tween_property(body, "scale", Vector2(1.1, 0.9), HOP_DURATION * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		squash.tween_property(body, "scale", Vector2(1.0, 1.0), HOP_DURATION * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		var squash_target: Node2D = sprite if sprite != null and sprite.visible else body
+		squash_target.scale = Vector2(1.0, 1.0)
+		squash.tween_property(squash_target, "scale", Vector2(1.1, 0.9), HOP_DURATION * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		squash.tween_property(squash_target, "scale", Vector2(1.0, 1.0), HOP_DURATION * 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 
 func _show_popup(text: String, color: Color) -> void:
 	var popup := Label.new()
@@ -216,3 +231,25 @@ func _show_popup(text: String, color: Color) -> void:
 	tween.tween_property(popup, "position:y", popup.position.y - 10.0, 0.34).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tween.tween_property(popup, "modulate:a", 0.0, 0.34).set_trans(Tween.TRANS_LINEAR)
 	tween.finished.connect(popup.queue_free)
+
+func _apply_sprite() -> void:
+	if sprite == null or body == null or data == null:
+		return
+	var texture := _resolve_sprite_texture()
+	if texture == null:
+		sprite.visible = false
+		body.visible = true
+		return
+	sprite.texture = texture
+	sprite.centered = true
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.visible = true
+	body.visible = false
+
+func _resolve_sprite_texture() -> Texture2D:
+	if data.sprite != null:
+		return data.sprite
+	var candidate := "%s/%s/%s_idle.png" % [ENEMY_SPRITE_ROOT, data.id, data.id]
+	if ResourceLoader.exists(candidate):
+		return load(candidate) as Texture2D
+	return null

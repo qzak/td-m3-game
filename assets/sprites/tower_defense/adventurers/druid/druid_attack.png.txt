@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=druid_attack.png
+category=tower_defense/adventurers/druid
+notes=Replace this file with final pixel-art sprite export when ready.

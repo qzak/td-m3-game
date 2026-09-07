@@ -1,0 +1,238 @@
+﻿# Graphics Checklist (Implemented Content)
+
+Art direction: pixel-art fantasy, warm/muted palette, dragon-only enemies.
+Placeholder convention: final_target.png => final_target.png.txt (replace with real PNG).
+
+## castle/backgrounds
+- [ ] castle_hub_day.png
+- [ ] castle_hub_night_overlay.png
+
+## castle/buildings/buttons
+- [ ] tavern_button_icon.png
+- [ ] quarters_button_icon.png
+- [ ] smelter_button_icon.png
+- [ ] weapon_smith_button_icon.png
+- [ ] armour_smith_button_icon.png
+- [ ] armoury_button_icon.png
+- [ ] towers_button_icon.png
+- [ ] war_room_button_icon.png
+- [ ] workshop_button_icon.png
+- [ ] library_button_icon.png
+- [ ] mine_button_icon.png
+- [ ] back_button_icon.png
+
+## castle/buildings/panels
+- [ ] tavern_panel_banner.png
+- [ ] quarters_panel_banner.png
+- [ ] smelter_panel_banner.png
+- [ ] weapon_smith_panel_banner.png
+- [ ] armour_smith_panel_banner.png
+- [ ] armoury_panel_banner.png
+- [ ] towers_panel_banner.png
+- [ ] war_room_panel_banner.png
+- [ ] workshop_panel_banner.png
+- [ ] library_panel_banner.png
+- [ ] upgrade_row_frame.png
+
+## items/armour
+- [ ] leather_vest_icon.png
+- [ ] chainmail_icon.png
+- [ ] gilded_plate_icon.png
+
+## items/tools
+- [ ] dynamite_icon.png
+- [ ] shovel_icon.png
+- [ ] wardbreaker_trinket_icon.png
+- [ ] wardbreaker_trinket_attuned_icon.png
+
+## items/weapons
+- [ ] iron_sword_icon.png
+- [ ] steel_blade_icon.png
+- [ ] golden_edge_icon.png
+
+## match3/backgrounds
+- [ ] mine_cavern_background.png
+- [ ] mine_board_backplate.png
+
+## match3/board
+- [ ] tile_slot_frame.png
+- [ ] selected_cell_outline.png
+- [ ] touch_target_outline.png
+- [ ] magic_barrier_line.png
+
+## match3/tiles
+- [ ] dirt_tile.png
+- [ ] stone_tile.png
+- [ ] clay_tile.png
+- [ ] copper_tile.png
+- [ ] iron_tile.png
+- [ ] gold_tile.png
+- [ ] hard_stone_tile.png
+- [ ] rooted_stone_tile.png
+
+## tower_defense/adventurers/archer
+- [ ] archer_idle.png
+- [ ] archer_walk.png
+- [ ] archer_attack.png
+- [ ] archer_hit.png
+- [ ] archer_death.png
+
+## tower_defense/adventurers/berserker
+- [ ] berserker_idle.png
+- [ ] berserker_walk.png
+- [ ] berserker_attack.png
+- [ ] berserker_hit.png
+- [ ] berserker_death.png
+
+## tower_defense/adventurers/druid
+- [ ] druid_idle.png
+- [ ] druid_walk.png
+- [ ] druid_attack.png
+- [ ] druid_hit.png
+- [ ] druid_death.png
+
+## tower_defense/adventurers/mage
+- [ ] mage_idle.png
+- [ ] mage_walk.png
+- [ ] mage_attack.png
+- [ ] mage_hit.png
+- [ ] mage_death.png
+
+## tower_defense/adventurers/pikeman
+- [ ] pikeman_idle.png
+- [ ] pikeman_walk.png
+- [ ] pikeman_attack.png
+- [ ] pikeman_hit.png
+- [ ] pikeman_death.png
+
+## tower_defense/adventurers/swordsman
+- [ ] swordsman_idle.png
+- [ ] swordsman_walk.png
+- [ ] swordsman_attack.png
+- [ ] swordsman_hit.png
+- [ ] swordsman_death.png
+
+## tower_defense/adventurers/tower
+- [ ] tower_idle.png
+- [ ] tower_attack.png
+- [ ] tower_hit.png
+- [ ] tower_death.png
+
+## tower_defense/backgrounds
+- [ ] battlefield_ground.png
+- [ ] battlefield_path_overlay.png
+- [ ] castle_gate_marker.png
+
+## tower_defense/enemies/drake_warlock
+- [ ] drake_warlock_idle.png
+- [ ] drake_warlock_walk.png
+- [ ] drake_warlock_attack.png
+- [ ] drake_warlock_hit.png
+- [ ] drake_warlock_death.png
+
+## tower_defense/enemies/elder_wyrm
+- [ ] elder_wyrm_idle.png
+- [ ] elder_wyrm_walk.png
+- [ ] elder_wyrm_attack.png
+- [ ] elder_wyrm_hit.png
+- [ ] elder_wyrm_death.png
+
+## tower_defense/enemies/hatchling_mystic
+- [ ] hatchling_mystic_idle.png
+- [ ] hatchling_mystic_walk.png
+- [ ] hatchling_mystic_attack.png
+- [ ] hatchling_mystic_hit.png
+- [ ] hatchling_mystic_death.png
+
+## tower_defense/enemies/war_drake
+- [ ] war_drake_idle.png
+- [ ] war_drake_walk.png
+- [ ] war_drake_attack.png
+- [ ] war_drake_hit.png
+- [ ] war_drake_death.png
+
+## tower_defense/enemies/whelp
+- [ ] whelp_idle.png
+- [ ] whelp_walk.png
+- [ ] whelp_attack.png
+- [ ] whelp_hit.png
+- [ ] whelp_death.png
+
+## tower_defense/enemies/wyrmling
+- [ ] wyrmling_idle.png
+- [ ] wyrmling_walk.png
+- [ ] wyrmling_attack.png
+- [ ] wyrmling_hit.png
+- [ ] wyrmling_death.png
+
+## tower_defense/enemies/young_drake
+- [ ] young_drake_idle.png
+- [ ] young_drake_walk.png
+- [ ] young_drake_attack.png
+- [ ] young_drake_hit.png
+- [ ] young_drake_death.png
+
+## tower_defense/grid
+- [ ] buildable_cell_tile.png
+- [ ] path_cell_tile.png
+- [ ] range_preview_fill.png
+- [ ] range_preview_outline.png
+- [ ] range_preview_center.png
+
+## ui/bars
+- [ ] hp_bar_fill_enemy.png
+- [ ] hp_bar_fill_adventurer.png
+- [ ] hp_bar_empty.png
+- [ ] action_meter_fill.png
+- [ ] action_meter_fill_stunned.png
+- [ ] action_meter_pip_full.png
+- [ ] action_meter_pip_empty.png
+
+## ui/battle_icons
+- [ ] wave_icon.png
+- [ ] upcoming_icon.png
+- [ ] drops_icon.png
+
+## ui/buttons
+- [ ] button_normal.png
+- [ ] button_hover.png
+- [ ] button_pressed.png
+- [ ] button_disabled.png
+
+## ui/panels
+- [ ] top_resource_bar_panel.png
+- [ ] generic_panel_bg.png
+- [ ] tooltip_panel_bg.png
+- [ ] unit_info_card_frame.png
+- [ ] armoury_grid_bg.png
+- [ ] armoury_grid_highlight_valid.png
+- [ ] armoury_grid_highlight_invalid.png
+
+## ui/resource_icons
+- [ ] coins_icon.png
+- [ ] copper_icon.png
+- [ ] iron_icon.png
+- [ ] gold_ore_icon.png
+- [ ] volatile_core_icon.png
+- [ ] refined_copper_icon.png
+- [ ] refined_iron_icon.png
+- [ ] refined_gold_icon.png
+
+## vfx/combat
+- [ ] melee_impact.png
+- [ ] ranged_projectile.png
+- [ ] ranged_impact.png
+- [ ] swarm_popup_burst.png
+
+## vfx/spells
+- [ ] fireball_projectile.png
+- [ ] arcane_bolt_projectile.png
+- [ ] frost_sigil_impact.png
+- [ ] thorn_nova_burst.png
+
+## vfx/status
+- [ ] slow_status_icon.png
+- [ ] armour_break_status_icon.png
+- [ ] slow_armour_break_combo_icon.png
+
+Total placeholder files: 166

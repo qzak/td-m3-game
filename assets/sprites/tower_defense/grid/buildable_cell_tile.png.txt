@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=buildable_cell_tile.png
+category=tower_defense/grid
+notes=Replace this file with final pixel-art sprite export when ready.

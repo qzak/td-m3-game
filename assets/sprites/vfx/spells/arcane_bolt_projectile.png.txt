@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=arcane_bolt_projectile.png
+category=vfx/spells
+notes=Replace this file with final pixel-art sprite export when ready.

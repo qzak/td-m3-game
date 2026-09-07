@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=hatchling_mystic_idle.png
+category=tower_defense/enemies/hatchling_mystic
+notes=Replace this file with final pixel-art sprite export when ready.

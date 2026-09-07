@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=action_meter_fill_stunned.png
+category=ui/bars
+notes=Replace this file with final pixel-art sprite export when ready.

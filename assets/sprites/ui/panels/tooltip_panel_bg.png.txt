@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=tooltip_panel_bg.png
+category=ui/panels
+notes=Replace this file with final pixel-art sprite export when ready.

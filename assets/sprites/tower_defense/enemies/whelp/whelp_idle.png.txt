@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=whelp_idle.png
+category=tower_defense/enemies/whelp
+notes=Replace this file with final pixel-art sprite export when ready.

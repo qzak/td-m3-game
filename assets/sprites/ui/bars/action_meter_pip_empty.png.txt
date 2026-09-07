@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=action_meter_pip_empty.png
+category=ui/bars
+notes=Replace this file with final pixel-art sprite export when ready.

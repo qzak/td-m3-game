@@ -19,6 +19,7 @@ const BOARD_GAP := 24.0
 const TOUCH_EDGE_HIT_SLOP_RATIO := 0.35
 const TOUCH_TARGET_MIN_HEIGHT := 56.0
 const TOUCH_DRAG_TARGET_COLOR := Color("f3dc8a")
+const MINE_SPRITE_ROOT := "res://assets/sprites/match3"
 const TILE_COLORS := {
 	"dirt": Color("8f684b"),
 	"stone": Color("65717a"),
@@ -61,6 +62,9 @@ var visual_tile_ids: Array = []
 var post_animation_status := ""
 var dynamite_targeting := false
 var tile_display_names: Dictionary = {}
+var tile_textures: Dictionary = {}
+var mine_background_texture: Texture2D
+var board_backplate_texture: Texture2D
 var board_font: Font
 var definitions: Array = [
 	preload("res://data/tiles/dirt.tres"),
@@ -74,6 +78,7 @@ var definitions: Array = [
 ]
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	board = BOARD_SCRIPT.new()
 	add_child(board)
 	_apply_layout()
@@ -92,6 +97,7 @@ func _ready() -> void:
 	dynamite_button.pressed.connect(_on_dynamite_pressed)
 	_apply_touch_target_sizes()
 	_cache_tile_display_names()
+	_load_visual_textures()
 	board_font = ThemeDB.fallback_font
 	EventBus.progression_changed.connect(func(_reason): _update_hud())
 	top_resource_bar.set_context("mine")
@@ -305,12 +311,31 @@ func _update_hud() -> void:
 	dynamite_button.disabled = is_animating or GameState.dynamite_count <= 0
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, DisplayLayout.current_viewport_size()), Color("182329"))
+	var viewport_size := DisplayLayout.current_viewport_size()
+	var viewport_rect := Rect2(Vector2.ZERO, viewport_size)
+	if mine_background_texture != null:
+		var tex_size := mine_background_texture.get_size()
+		if tex_size.y > 0.0:
+			var bg_scale := viewport_size.y / tex_size.y
+			var scaled_width := tex_size.x * bg_scale
+			var center_x := viewport_size.x * 0.5
+			# Center a tile on screen center, then repeat outward to cover the full width.
+			var tile_x := fposmod(center_x - scaled_width * 0.5, scaled_width) - scaled_width
+			while tile_x < viewport_size.x:
+				draw_texture_rect(mine_background_texture, Rect2(Vector2(tile_x, 0.0), Vector2(scaled_width, viewport_size.y)), false)
+				tile_x += scaled_width
+		else:
+			draw_texture_rect(mine_background_texture, viewport_rect, true)
+	else:
+		draw_rect(viewport_rect, Color("182329"))
 	var tile_padding := _tile_padding()
 	var tile_size := Vector2(cell_size - tile_padding, cell_size - tile_padding)
 	var font_size := int(clampf(cell_size * 0.25, 10.0, 16.0))
 	var text_offset := Vector2(cell_size * 0.14, cell_size * 0.58)
 	var draw_font := board_font if board_font != null else ThemeDB.fallback_font
+	var board_rect := Rect2(board_origin, Vector2(BOARD_WIDTH * cell_size, BOARD_HEIGHT * cell_size))
+	if board_backplate_texture != null:
+		draw_texture_rect(board_backplate_texture, board_rect, true)
 	for y in range(BOARD_HEIGHT):
 		for x in range(BOARD_WIDTH):
 			var rect := Rect2(board_origin + Vector2(x, y) * cell_size, tile_size)
@@ -321,10 +346,15 @@ func _draw() -> void:
 					tile_id = visual_tile_ids[y][x] if visual_tile_ids[y][x] != null else ""
 				elif not board.tiles.is_empty() and board.tiles[y][x] != null:
 					tile_id = board.tiles[y][x].id
-			var color: Color = TILE_COLORS.get(tile_id, Color("39484d")) if not tile_id.is_empty() else Color("253239")
-			draw_rect(rect, color, true)
-			draw_rect(rect, Color("dce5e1", 0.35), false, 2.0)
-			if not tile_id.is_empty():
+			var tile_texture := _tile_texture(tile_id)
+			if tile_texture != null:
+				draw_texture_rect(tile_texture, rect, false)
+				draw_rect(rect, Color("dce5e1", 0.25), false, 2.0)
+			else:
+				var color: Color = TILE_COLORS.get(tile_id, Color("39484d")) if not tile_id.is_empty() else Color("253239")
+				draw_rect(rect, color, true)
+				draw_rect(rect, Color("dce5e1", 0.35), false, 2.0)
+			if not tile_id.is_empty() and tile_texture == null:
 				draw_string(draw_font, rect.position + text_offset, _tile_display_name(tile_id), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE)
 	if GameState.gate_state("magic_barrier") == GameState.GATE_ACTIVE and not GameState.progression.get("barrier_trinket_activated", false):
 		var barrier_y := board_origin.y + 6.0 * cell_size
@@ -490,21 +520,26 @@ func _draw_animated_tile(animated_tile: AnimatedTile) -> void:
 	var size := base_size * animated_tile.scale
 	var top_left := animated_tile.position + (base_size - size) * 0.5
 	var rect := Rect2(top_left, size)
-	var base_color: Color = TILE_COLORS.get(animated_tile.tile_id, Color("39484d"))
-	var color := Color(base_color.r, base_color.g, base_color.b, animated_tile.alpha)
-	draw_rect(rect, color, true)
-	draw_rect(rect, Color("dce5e1", 0.35 * animated_tile.alpha), false, 2.0)
-	var label_text := _tile_display_name(animated_tile.tile_id)
-	var draw_font := board_font if board_font != null else ThemeDB.fallback_font
-	draw_string(
-		draw_font,
-		top_left + Vector2(cell_size * 0.14, cell_size * 0.58),
-		label_text,
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		int(clampf(cell_size * 0.25, 10.0, 16.0)),
-		Color(1, 1, 1, animated_tile.alpha)
-	)
+	var tile_texture := _tile_texture(animated_tile.tile_id)
+	if tile_texture != null:
+		draw_texture_rect(tile_texture, rect, false, Color(1.0, 1.0, 1.0, animated_tile.alpha))
+		draw_rect(rect, Color("dce5e1", 0.35 * animated_tile.alpha), false, 2.0)
+	else:
+		var base_color: Color = TILE_COLORS.get(animated_tile.tile_id, Color("39484d"))
+		var color := Color(base_color.r, base_color.g, base_color.b, animated_tile.alpha)
+		draw_rect(rect, color, true)
+		draw_rect(rect, Color("dce5e1", 0.35 * animated_tile.alpha), false, 2.0)
+		var label_text := _tile_display_name(animated_tile.tile_id)
+		var draw_font := board_font if board_font != null else ThemeDB.fallback_font
+		draw_string(
+			draw_font,
+			top_left + Vector2(cell_size * 0.14, cell_size * 0.58),
+			label_text,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			-1,
+			int(clampf(cell_size * 0.25, 10.0, 16.0)),
+			Color(1, 1, 1, animated_tile.alpha)
+		)
 
 func _cell_position(cell: Vector2i) -> Vector2:
 	return board_origin + Vector2(cell.x, cell.y) * cell_size
@@ -520,6 +555,25 @@ func _cache_tile_display_names() -> void:
 
 func _tile_display_name(tile_id: String) -> String:
 	return str(tile_display_names.get(tile_id, tile_id.capitalize()))
+
+func _load_visual_textures() -> void:
+	mine_background_texture = _load_texture_if_exists("%s/backgrounds/mine_cavern_background.png" % MINE_SPRITE_ROOT)
+	board_backplate_texture = _load_texture_if_exists("%s/backgrounds/mine_board_backplate.png" % MINE_SPRITE_ROOT)
+	tile_textures.clear()
+	for definition in definitions:
+		var tile_id := str(definition.id)
+		var texture_path := "%s/tiles/%s_tile.png" % [MINE_SPRITE_ROOT, tile_id]
+		tile_textures[tile_id] = _load_texture_if_exists(texture_path)
+
+func _tile_texture(tile_id: String) -> Texture2D:
+	if tile_id.is_empty() or not tile_textures.has(tile_id):
+		return null
+	return tile_textures[tile_id] as Texture2D
+
+func _load_texture_if_exists(path: String) -> Texture2D:
+	if not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D
 
 func _sync_visual_tiles_from_board() -> void:
 	visual_tile_ids = board.serialize()

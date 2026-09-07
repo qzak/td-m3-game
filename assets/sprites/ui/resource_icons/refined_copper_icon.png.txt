@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=refined_copper_icon.png
+category=ui/resource_icons
+notes=Replace this file with final pixel-art sprite export when ready.

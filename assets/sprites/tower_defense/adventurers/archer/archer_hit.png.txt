@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=archer_hit.png
+category=tower_defense/adventurers/archer
+notes=Replace this file with final pixel-art sprite export when ready.

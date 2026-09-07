@@ -36,8 +36,19 @@ const GRID_LINE_COLOR := Color(0.4, 0.4, 0.4)
 const PREVIEW_FILL_COLOR := Color(1.0, 0.0, 0.0, 0.35)
 const PREVIEW_OUTLINE_COLOR := Color(1.0, 0.0, 0.0, 0.9)
 const PREVIEW_CENTER_COLOR := Color(0.2, 0.9, 0.3, 0.35)
+const TD_BACKGROUND_SPRITE_ROOT := "res://assets/sprites/tower_defense/backgrounds"
+const TD_GRID_SPRITE_ROOT := "res://assets/sprites/tower_defense/grid"
+
+var battlefield_ground_texture: Texture2D
+var path_cell_texture: Texture2D
+var buildable_cell_texture: Texture2D
+var castle_gate_texture: Texture2D
+var preview_fill_texture: Texture2D
+var preview_outline_texture: Texture2D
+var preview_center_texture: Texture2D
 
 func _ready() -> void:
+	_load_visual_textures()
 	_build_path()
 	queue_redraw()
 
@@ -198,14 +209,24 @@ func _cell_from_screen_position(screen_position: Vector2, use_touch_slop: bool) 
 	return world_to_cell(clamped_pos)
 
 func _draw() -> void:
+	var grid_size := grid_pixel_size()
+	if battlefield_ground_texture != null:
+		draw_texture_rect(battlefield_ground_texture, Rect2(Vector2.ZERO, grid_size), true)
 	for y in range(grid_height):
 		for x in range(grid_width):
 			var cell := Vector2i(x, y)
 			var rect := Rect2(x * cell_size, y * cell_size, cell_size, cell_size)
-			var color := PATH_COLOR if path_cell_set.has(cell) else BUILDABLE_COLOR
-			draw_rect(rect, color, true)
+			if path_cell_set.has(cell):
+				if path_cell_texture != null:
+					draw_texture_rect(path_cell_texture, rect, false)
+				else:
+					draw_rect(rect, PATH_COLOR, true)
+			else:
+				if buildable_cell_texture != null:
+					draw_texture_rect(buildable_cell_texture, rect, false)
+				else:
+					draw_rect(rect, BUILDABLE_COLOR, true)
 
-	var grid_size := grid_pixel_size()
 	for x in range(grid_width + 1):
 		var x_pos := x * cell_size
 		draw_line(Vector2(x_pos, 0.0), Vector2(x_pos, grid_size.y), GRID_LINE_COLOR, 1.0)
@@ -217,8 +238,11 @@ func _draw() -> void:
 		# The castle doors: mark the final path cell distinctly from the rest of the path.
 		var castle_cell: Vector2i = path_cells[path_cells.size() - 1]
 		var castle_rect := Rect2(castle_cell.x * cell_size, castle_cell.y * cell_size, cell_size, cell_size)
-		draw_rect(castle_rect, Color(0.35, 0.2, 0.15), true)
-		draw_rect(castle_rect, Color(0.9, 0.75, 0.3), false, 3.0)
+		if castle_gate_texture != null:
+			draw_texture_rect(castle_gate_texture, castle_rect, false)
+		else:
+			draw_rect(castle_rect, Color(0.35, 0.2, 0.15), true)
+			draw_rect(castle_rect, Color(0.9, 0.75, 0.3), false, 3.0)
 
 	for cell: Vector2i in reserved_cells:
 		var rect := Rect2(cell.x * cell_size, cell.y * cell_size, cell_size, cell_size)
@@ -228,10 +252,19 @@ func _draw() -> void:
 	if preview_active:
 		for cell in preview_cells:
 			var rect := Rect2(cell.x * cell_size, cell.y * cell_size, cell_size, cell_size)
-			draw_rect(rect, PREVIEW_FILL_COLOR, true)
-			draw_rect(rect, PREVIEW_OUTLINE_COLOR, false, 3.0)
+			if preview_fill_texture != null:
+				draw_texture_rect(preview_fill_texture, rect, false)
+			else:
+				draw_rect(rect, PREVIEW_FILL_COLOR, true)
+			if preview_outline_texture != null:
+				draw_texture_rect(preview_outline_texture, rect, false)
+			else:
+				draw_rect(rect, PREVIEW_OUTLINE_COLOR, false, 3.0)
 		var center_rect := Rect2(preview_center.x * cell_size, preview_center.y * cell_size, cell_size, cell_size)
-		draw_rect(center_rect, PREVIEW_CENTER_COLOR, true)
+		if preview_center_texture != null:
+			draw_texture_rect(preview_center_texture, center_rect, false)
+		else:
+			draw_rect(center_rect, PREVIEW_CENTER_COLOR, true)
 
 func _rebuild_preview_cells() -> void:
 	preview_cells.clear()
@@ -248,3 +281,17 @@ func _rebuild_preview_cells() -> void:
 			var cell := Vector2i(preview_center.x + dx, preview_center.y + dy)
 			if is_in_bounds(cell):
 				preview_cells.append(cell)
+
+func _load_visual_textures() -> void:
+	battlefield_ground_texture = _load_texture_if_exists("%s/battlefield_ground.png" % TD_BACKGROUND_SPRITE_ROOT)
+	path_cell_texture = _load_texture_if_exists("%s/path_cell_tile.png" % TD_GRID_SPRITE_ROOT)
+	buildable_cell_texture = _load_texture_if_exists("%s/buildable_cell_tile.png" % TD_GRID_SPRITE_ROOT)
+	castle_gate_texture = _load_texture_if_exists("%s/castle_gate_marker.png" % TD_BACKGROUND_SPRITE_ROOT)
+	preview_fill_texture = _load_texture_if_exists("%s/range_preview_fill.png" % TD_GRID_SPRITE_ROOT)
+	preview_outline_texture = _load_texture_if_exists("%s/range_preview_outline.png" % TD_GRID_SPRITE_ROOT)
+	preview_center_texture = _load_texture_if_exists("%s/range_preview_center.png" % TD_GRID_SPRITE_ROOT)
+
+func _load_texture_if_exists(path: String) -> Texture2D:
+	if not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D

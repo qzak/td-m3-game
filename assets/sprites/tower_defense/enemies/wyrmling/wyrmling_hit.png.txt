@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=wyrmling_hit.png
+category=tower_defense/enemies/wyrmling
+notes=Replace this file with final pixel-art sprite export when ready.

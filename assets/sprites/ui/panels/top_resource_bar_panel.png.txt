@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=top_resource_bar_panel.png
+category=ui/panels
+notes=Replace this file with final pixel-art sprite export when ready.

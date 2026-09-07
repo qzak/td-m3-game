@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=thorn_nova_burst.png
+category=vfx/spells
+notes=Replace this file with final pixel-art sprite export when ready.

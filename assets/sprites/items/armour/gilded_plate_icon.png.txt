@@ -1,0 +1,4 @@
+﻿PLACEHOLDER SPRITE
+target_file=gilded_plate_icon.png
+category=items/armour
+notes=Replace this file with final pixel-art sprite export when ready.
