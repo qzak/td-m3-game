@@ -5,6 +5,7 @@ class_name TDBattleController
 const ENEMY_SCENE := preload("res://scenes/tower_defense/enemy_unit.tscn")
 const ADVENTURER_SCENE := preload("res://scenes/tower_defense/adventurer_unit.tscn")
 const UNIT_INFO_CARD_SCRIPT := preload("res://scripts/ui/unit_info_card.gd")
+const BUTTON_THEME := preload("res://scripts/ui/button_theme_factory.gd")
 
 @export var step_interval: float = 0.5
 @export var day_data: DayData
@@ -81,6 +82,7 @@ const TOUCH_ENEMY_PICK_RADIUS := 32.0
 func _ready() -> void:
 	castle_hp = starting_castle_hp
 	day_start_currency = GameState.currency
+	BUTTON_THEME.apply_to(hud)
 
 	if GameState.selected_day_index > 0:
 		var loaded_day: DayData = load("res://data/waves/day_%d.tres" % GameState.selected_day_index)

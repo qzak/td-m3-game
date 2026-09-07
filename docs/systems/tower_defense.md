@@ -4,6 +4,12 @@ Living documentation of the TD battle scene as it's actually implemented. Update
 alongside code changes so it stays a reliable reference. See
 [docs/IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md) for the overall design/roadmap.
 
+- Player-facing TD buttons (including runtime placement buttons and spell `OptionButton` pickers)
+  now inherit the shared button skin from
+  [scripts/ui/button_theme_factory.gd](../../scripts/ui/button_theme_factory.gd), including the
+  `#bd5f31` interior fill and state tints. Frame borders tile/loop instead of stretching, and HUD
+  texture filtering is forced to nearest to keep pixel-art edges sharp.
+
 ## Files
 
 | File | Responsibility |

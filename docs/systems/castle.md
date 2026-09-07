@@ -4,6 +4,12 @@ Living documentation of the Castle hub scene as it's actually implemented. Updat
 alongside code changes so it stays a reliable reference. See
 [docs/IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md) for the overall design/roadmap.
 
+- Player-facing Castle buttons now use the shared button skin from
+  [scripts/ui/button_theme_factory.gd](../../scripts/ui/button_theme_factory.gd), which applies the
+  frame/corner UI art and `#bd5f31` interior fill through the Castle HUD theme. Frame borders use
+  tiled repetition (not stretch), corner gems protrude slightly past the button bounds, and the HUD
+  forces nearest filtering to preserve crisp pixel edges.
+
 ## Files
 
 | File | Responsibility |

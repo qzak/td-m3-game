@@ -3,6 +3,7 @@ class_name CastleController
 ## Hub scene: load the save, and switch between Tavern/Quarters panels or start a Day.
 
 const CASTLE_BUTTON_ICON_ROOT := "res://assets/sprites/castle/buildings/buttons"
+const BUTTON_THEME := preload("res://scripts/ui/button_theme_factory.gd")
 
 @onready var tavern_panel: TavernController = $UI/HUD/SafeArea/MainColumns/PanelHost/TavernPanel
 @onready var quarters_panel: QuartersController = $UI/HUD/SafeArea/MainColumns/PanelHost/QuartersPanel
@@ -31,6 +32,7 @@ const CASTLE_BUTTON_ICON_ROOT := "res://assets/sprites/castle/buildings/buttons"
 @onready var objective_label: Label = $UI/HUD/SafeArea/MainColumns/Sidebar/ObjectiveLabel
 @onready var safe_area: MarginContainer = $UI/HUD/SafeArea
 @onready var side_bar: VBoxContainer = $UI/HUD/SafeArea/MainColumns/Sidebar
+@onready var hud: Control = $UI/HUD
 
 var all_panels: Array[Control] = []
 const TOP_BAR_HEIGHT := 56.0
@@ -40,6 +42,7 @@ const SAFE_BOTTOM_PADDING := 16.0
 
 func _ready() -> void:
 	SaveManager.load_game()
+	BUTTON_THEME.apply_to(hud)
 	top_resource_bar.set_context("castle")
 	_apply_safe_area_layout()
 	DisplayLayout.viewport_size_changed.connect(_on_viewport_size_changed)

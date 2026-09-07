@@ -3,6 +3,12 @@
 The mine is a 10x10 resource-gathering board. It is entered from the Castle's `Enter Mine`
 button and returns through `Return to Castle`.
 
+- Player-facing Mine action buttons inherit the shared button skin from
+  [scripts/ui/button_theme_factory.gd](../../scripts/ui/button_theme_factory.gd), using the
+  frame/corner UI art and `#bd5f31` interior fill
+  with hover/pressed/disabled tint variants. Border strips are tiled around the perimeter and
+  nearest filtering is used to retain crisp pixel visuals.
+
 Project display uses canonical cross-platform stretch settings
 (`window/stretch/mode="canvas_items"` + `window/stretch/aspect="expand"`), with runtime layout now
 adapting to safe-area insets and viewport size.

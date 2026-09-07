@@ -1,6 +1,8 @@
 extends Control
 class_name ResourceHUD
 
+const BUTTON_THEME := preload("res://scripts/ui/button_theme_factory.gd")
+
 const COMPACT_MATERIAL_IDS: Array[String] = ["copper", "iron", "gold"]
 const DETAIL_PRIORITY_IDS: Array[String] = [
 	"copper",
@@ -19,6 +21,7 @@ var details_pinned: bool = false
 var hover_active: bool = false
 
 func _ready() -> void:
+	BUTTON_THEME.apply_to(self)
 	mouse_entered.connect(func(): _set_hover(true))
 	mouse_exited.connect(func(): _set_hover(false))
 	compact_button.pressed.connect(_on_compact_pressed)

@@ -2,6 +2,7 @@ extends Node2D
 class_name MineController
 
 const BOARD_SCRIPT = preload("res://scripts/match3/board.gd")
+const BUTTON_THEME := preload("res://scripts/ui/button_theme_factory.gd")
 const BOARD_WIDTH := 10
 const BOARD_HEIGHT := 10
 const SWAP_ANIMATION_TIME := 0.14
@@ -45,6 +46,7 @@ class AnimatedTile extends RefCounted:
 @onready var descend_progress_label: Label = $UI/HUD/SafeArea/Content/LeftPanel/DescendProgressLabel
 @onready var dynamite_button: Button = $UI/HUD/SafeArea/Content/LeftPanel/DynamiteButton
 @onready var top_resource_bar: Control = $UI/HUD/TopResourceBar
+@onready var hud: Control = $UI/HUD
 @onready var safe_area: MarginContainer = $UI/HUD/SafeArea
 @onready var left_panel: VBoxContainer = $UI/HUD/SafeArea/Content/LeftPanel
 
@@ -79,6 +81,7 @@ var definitions: Array = [
 
 func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	BUTTON_THEME.apply_to(hud)
 	board = BOARD_SCRIPT.new()
 	add_child(board)
 	_apply_layout()
