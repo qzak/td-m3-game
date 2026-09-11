@@ -86,8 +86,9 @@ alongside code changes so it stays a reliable reference. See
 - `.github/workflows/godot-web-build.yml` builds the **Web** preset with `barichello/godot-ci:4.7.2`
   on every push to `main`, uploads the generated browser bundle as a workflow artifact, and deploys
   `build/web` to the `gh-pages` branch for GitHub Pages hosting. The workflow installs Linux fontconfig
-  support before running Godot, copies export templates from the godot-ci image when available, then
-  downloads the official Godot export templates if the single-thread Web templates are missing.
+  support before running Godot, uses Bash for strict shell handling, copies export templates from the
+  godot-ci image when available, then downloads the official Godot export templates if the single-thread
+  Web templates are missing.
 - The shared `TopResourceBar` spans the top edge of the screen. Castle uses the `castle` context by
   default and switches to the `smith` context when Smelter/Weapon Smith/Armour Smith are focused to
   prioritize refined-material visibility. The bar now shows a scene context tag and emphasizes
