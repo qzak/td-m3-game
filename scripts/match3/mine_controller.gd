@@ -10,6 +10,8 @@ const MOVE_TO_EMPTY_ANIMATION_TIME := 0.16
 const CLEAR_ANIMATION_TIME := 0.18
 const GRAVITY_ANIMATION_TIME := 0.22
 const DESCEND_ANIMATION_TIME := 0.3
+const REJECTED_SWAP_ANIMATION_TIME := 0.12
+const REJECTED_SWAP_PROGRESS := 0.35
 
 const DEFAULT_CELL_SIZE := 56.0
 const TOP_BAR_HEIGHT := 56.0
@@ -210,13 +212,17 @@ func _handle_board_cell_pressed(cell: Vector2i) -> void:
 		selected_cell = cell
 		status_label.text = "Move along rows to clear the top edge (5 rows)"
 	else:
-		var moved: bool = board.try_move_to_empty(selected_cell, cell) if board.tiles[cell.y][cell.x] == null else board.try_swap(selected_cell, cell)
+		var attempted_swap_cell := selected_cell
+		var target_is_empty: bool = board.tiles[cell.y][cell.x] == null
+		var moved: bool = board.try_move_to_empty(selected_cell, cell) if target_is_empty else board.try_swap(selected_cell, cell)
+		selected_cell = Vector2i(-1, -1)
 		if moved:
 			_set_status("Resolving...")
 		else:
 			var blocked_reason := GameState.mine_blocked_reason()
 			_set_status(blocked_reason if not blocked_reason.is_empty() else "That move makes no match")
-		selected_cell = Vector2i(-1, -1)
+			if not target_is_empty and absi(attempted_swap_cell.x - cell.x) + absi(attempted_swap_cell.y - cell.y) == 1:
+				await _play_rejected_swap_animation(attempted_swap_cell, cell)
 	queue_redraw()
 
 func _screen_to_cell(screen_position: Vector2, use_touch_slop: bool) -> Vector2i:
@@ -477,6 +483,57 @@ func _play_swap_animation(event: Dictionary) -> void:
 
 	animation_tiles.clear()
 	hidden_cells.clear()
+	queue_redraw()
+
+func _play_rejected_swap_animation(first: Vector2i, second: Vector2i) -> void:
+	if not _is_visual_cell(first) or not _is_visual_cell(second):
+		return
+	is_animating = true
+	_update_hud()
+
+	var first_tile_id_value = _get_visual_tile_id(first)
+	var second_tile_id_value = _get_visual_tile_id(second)
+	var first_tile_id: String = first_tile_id_value if first_tile_id_value != null else ""
+	var second_tile_id: String = second_tile_id_value if second_tile_id_value != null else ""
+
+	animation_tiles.clear()
+	hidden_cells.clear()
+	hidden_cells[first] = true
+	hidden_cells[second] = true
+
+	var first_tile := AnimatedTile.new()
+	first_tile.tile_id = first_tile_id
+	var first_origin := _cell_position(first)
+	first_tile.position = first_origin
+	animation_tiles.append(first_tile)
+
+	var second_tile := AnimatedTile.new()
+	second_tile.tile_id = second_tile_id
+	var second_origin := _cell_position(second)
+	second_tile.position = second_origin
+	animation_tiles.append(second_tile)
+
+	# Nudge each tile partway toward the other cell, then snap back, to read as an aborted swap.
+	var first_midpoint := first_origin.lerp(second_origin, REJECTED_SWAP_PROGRESS)
+	var second_midpoint := second_origin.lerp(first_origin, REJECTED_SWAP_PROGRESS)
+
+	# Two independent per-tile tweens (each sequential: out, then back) run concurrently.
+	var first_tween := create_tween()
+	first_tween.tween_property(first_tile, "position", first_midpoint, REJECTED_SWAP_ANIMATION_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	first_tween.tween_property(first_tile, "position", first_origin, REJECTED_SWAP_ANIMATION_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+
+	var second_tween := create_tween()
+	second_tween.tween_property(second_tile, "position", second_midpoint, REJECTED_SWAP_ANIMATION_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	second_tween.tween_property(second_tile, "position", second_origin, REJECTED_SWAP_ANIMATION_TIME).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+
+	await first_tween.finished
+	if second_tween.is_valid() and second_tween.is_running():
+		await second_tween.finished
+
+	animation_tiles.clear()
+	hidden_cells.clear()
+	is_animating = false
+	_update_hud()
 	queue_redraw()
 
 func _play_movement_animation(moves: Array, duration: float) -> void:
