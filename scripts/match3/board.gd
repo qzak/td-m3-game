@@ -328,7 +328,7 @@ func use_dynamite(cell: Vector2i) -> bool:
 func _tile_locked_from_clear(tile) -> bool:
 	if tile == null:
 		return false
-	if int(tile.hardness_tier) > 0 and GameState.gate_state("hardness_a") == GameState.GATE_ACTIVE:
+	if int(tile.hardness_tier) > 0:
 		return true
 	if bool(tile.immovable) and not GameState.shovel_unlocked:
 		return true

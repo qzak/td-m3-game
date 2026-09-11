@@ -52,7 +52,7 @@ adapting to safe-area insets and viewport size.
   `EventBus.mine_match_resolved`.
 - Garbage tiles are dirt, stone, and clay. They have no material reward and primarily clear space.
 - Gate-aware blocker rules:
-  - **Hardness Gate A** (`hard_stone`): active from the first cleared depth layer; survives normal match clears while active and must be removed with Dynamite.
+  - **Hardness Gate A** (`hard_stone`): active from the first cleared depth layer; `hard_stone` tiles always survive normal match clears (never removed by matching three) and must be removed with Dynamite.
   - **Hardness Gate B** (`rooted_stone`): arms once the mine reaches depth 5 (`GameState.HARDNESS_B_DEPTH`); cannot be moved by normal swap/move rules until Shovel is crafted.
   - **Magic Barrier Gate**: arms once the mine reaches depth 15 (`GameState.MAGIC_BARRIER_DEPTH`); matching/moving below the barrier row is blocked until the trinket is attuned.
   - Gates no longer chain instantly off each other's resolution — `GameState.check_depth_gates(depth)` arms each gate independently by depth, so resolving an earlier gate (e.g. blasting hard_stone) does not immediately spawn the next gate's blocker tile on the same layer.
