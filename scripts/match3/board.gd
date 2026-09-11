@@ -86,7 +86,7 @@ func try_swap(first: Vector2i, second: Vector2i) -> bool:
 		return false
 	tiles[first.y][first.x] = second_tile
 	tiles[second.y][second.x] = first_tile
-	if solver.find_matches(tiles, WIDTH, HEIGHT).is_empty():
+	if _find_clearable_matches().is_empty():
 		tiles[first.y][first.x] = first_tile
 		tiles[second.y][second.x] = second_tile
 		return false
@@ -136,6 +136,17 @@ func try_move_to_empty(source: Vector2i, destination: Vector2i) -> bool:
 	else:
 		board_changed.emit()
 	return true
+
+# Matches that consist only of tiles locked from clearing (e.g. hard_stone) don't count
+# toward move legality, since they can never actually resolve.
+func _find_clearable_matches() -> Array[Vector2i]:
+	var matches := solver.find_matches(tiles, WIDTH, HEIGHT)
+	var clearable: Array[Vector2i] = []
+	for cell in matches:
+		var tile = tiles[cell.y][cell.x]
+		if not _tile_locked_from_clear(tile):
+			clearable.append(cell)
+	return clearable
 
 func _resolve_matches() -> void:
 	var rewards: Dictionary = {}
