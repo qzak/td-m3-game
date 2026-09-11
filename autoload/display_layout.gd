@@ -32,6 +32,10 @@ func extra_viewport_height() -> float:
 func safe_area_rect() -> Rect2:
 	var viewport_size := current_viewport_size()
 	var fallback := Rect2(Vector2.ZERO, viewport_size)
+	# Only mobile reports a window-relative safe area; desktop/web report the whole screen,
+	# which is in different units than the window and produces bogus margins.
+	if not _has_display_safe_area():
+		return fallback
 	var safe_area := Rect2(DisplayServer.get_display_safe_area())
 	if safe_area.size.x <= 0.0 or safe_area.size.y <= 0.0:
 		return fallback
@@ -64,6 +68,11 @@ func safe_area_margins() -> Dictionary:
 		"right": maxf(0.0, viewport_size.x - safe.end.x),
 		"bottom": maxf(0.0, viewport_size.y - safe.end.y),
 	}
+
+
+func _has_display_safe_area() -> bool:
+	var os_name := OS.get_name()
+	return os_name == "Android" or os_name == "iOS"
 
 
 func _on_root_size_changed() -> void:

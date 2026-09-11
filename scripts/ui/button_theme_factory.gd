@@ -132,13 +132,17 @@ static func _make_button_style(frame: Image, corner: Image, fill_color: Color) -
 	return style
 
 static func _load_image(path: String) -> Image:
-	if not FileAccess.file_exists(path):
+	# Source .png files are not shipped in exports; only the imported texture is.
+	if not ResourceLoader.exists(path):
 		return null
-	var bytes := FileAccess.get_file_as_bytes(path)
-	if bytes.is_empty():
+	var texture := load(path) as Texture2D
+	if texture == null:
 		return null
-	var image := Image.new()
-	if image.load_png_from_buffer(bytes) != OK:
+	var image := texture.get_image()
+	if image == null:
+		return null
+	image = image.duplicate()
+	if image.is_compressed() and image.decompress() != OK:
 		return null
 	return image
 
