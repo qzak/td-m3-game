@@ -61,6 +61,12 @@ jobs:
           test -f "$TEMPLATE_DIR/web_nothreads_debug.zip"
           ls -1 "$TEMPLATE_DIR" | sort
 
+      - name: Import Godot assets
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_PATH"
+          godot --headless --import --quit
+
       - name: Export Web
         run: |
           set -euo pipefail
