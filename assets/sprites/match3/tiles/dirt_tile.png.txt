@@ -1,4 +1,0 @@
-﻿PLACEHOLDER SPRITE
-target_file=dirt_tile.png
-category=match3/tiles
-notes=Replace this file with final pixel-art sprite export when ready.
