@@ -79,7 +79,8 @@ alongside code changes so it stays a reliable reference. See
   currently 2D/UI-heavy, so the web Compatibility renderer should remain the browser target unless
   Godot gains Web support for Mobile/Forward+ renderers.
 - `.github/workflows/godot-web-build.yml` builds the **Web** preset with `barichello/godot-ci:4.7.2`
-  on every push to `main` and uploads the generated browser bundle as a workflow artifact.
+  on every push to `main`, uploads the generated browser bundle as a workflow artifact, and deploys
+  `build/web` to the `gh-pages` branch for GitHub Pages hosting.
 - The shared `TopResourceBar` spans the top edge of the screen. Castle uses the `castle` context by
   default and switches to the `smith` context when Smelter/Weapon Smith/Armour Smith are focused to
   prioritize refined-material visibility. The bar now shows a scene context tag and emphasizes

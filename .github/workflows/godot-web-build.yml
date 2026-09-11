@@ -11,6 +11,13 @@ env:
   EXPORT_NAME: td-m3-game
   PROJECT_PATH: .
 
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
 jobs:
   export-web:
     name: Export Web
@@ -35,6 +42,7 @@ jobs:
           EXPORT_DIR="$(readlink -f build)"
           cd "$PROJECT_PATH"
           godot --headless --verbose --export-release "Web" "$EXPORT_DIR/web/index.html"
+          touch "$EXPORT_DIR/web/.nojekyll"
 
       - name: Upload Web artifact
         uses: actions/upload-artifact@v4
@@ -43,3 +51,10 @@ jobs:
           path: build/web
           if-no-files-found: error
           retention-days: 14
+
+      - name: Deploy to gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: build/web
+          clean: true
