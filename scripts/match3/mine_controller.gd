@@ -103,7 +103,7 @@ func _ready() -> void:
 	_apply_touch_target_sizes()
 	_cache_tile_display_names()
 	_load_visual_textures()
-	board_font = ThemeDB.fallback_font
+	board_font = BUTTON_THEME.game_font()
 	EventBus.progression_changed.connect(func(_reason): _update_hud())
 	top_resource_bar.set_context("mine")
 	_update_hud()

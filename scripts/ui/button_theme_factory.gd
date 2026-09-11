@@ -3,10 +3,12 @@ class_name ButtonThemeFactory
 
 const FRAME_PATH := "res://assets/sprites/ui/buttons/button_frame.png"
 const CORNER_PATH := "res://assets/sprites/ui/buttons/button_frame_corner.png"
+const GAME_FONT_PATH := "res://assets/fonts/PixelifySans.ttf"
 const BASE_FILL_COLOR := Color("bd5f31")
 const CORNER_PROTRUSION := 2
 
 static var _theme_cache: Theme
+static var _font_cache: Font
 
 static func get_theme() -> Theme:
 	if _theme_cache == null:
@@ -17,11 +19,18 @@ static func apply_to(control: Control) -> void:
 	control.theme = get_theme()
 	control.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
+static func game_font() -> Font:
+	if _font_cache == null:
+		_font_cache = load(GAME_FONT_PATH) as Font
+	return _font_cache if _font_cache != null else ThemeDB.fallback_font
+
 static func _build_theme() -> Theme:
 	var frame := _load_image(FRAME_PATH)
 	var corner := _load_image(CORNER_PATH)
 	if frame == null or corner == null:
-		return Theme.new()
+		var fallback_theme := Theme.new()
+		_apply_font(fallback_theme)
+		return fallback_theme
 
 	var corner_w := corner.get_width()
 	var corner_h := corner.get_height()
@@ -32,6 +41,7 @@ static func _build_theme() -> Theme:
 	var disabled_style := _make_button_style(frame, corner, _disabled_fill(BASE_FILL_COLOR))
 
 	var theme := Theme.new()
+	_apply_font(theme)
 	for type_name in ["Button", "OptionButton"]:
 		theme.set_stylebox("normal", type_name, normal_style.duplicate())
 		theme.set_stylebox("hover", type_name, hover_style.duplicate())
@@ -49,6 +59,11 @@ static func _build_theme() -> Theme:
 	theme.set_color("font_hover_color", "PopupMenu", Color("fffaf5"))
 	theme.set_color("font_disabled_color", "PopupMenu", Color("dbc1af"))
 	return theme
+
+static func _apply_font(theme: Theme) -> void:
+	var font := game_font()
+	for type_name in ["Button", "OptionButton", "Label", "Panel", "PopupMenu", "RichTextLabel"]:
+		theme.set_font("font", type_name, font)
 
 static func _make_button_style(frame: Image, corner: Image, fill_color: Color) -> StyleBoxTexture:
 	var frame_w := frame.get_width()

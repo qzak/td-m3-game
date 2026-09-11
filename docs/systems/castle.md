@@ -6,9 +6,9 @@ alongside code changes so it stays a reliable reference. See
 
 - Player-facing Castle buttons now use the shared button skin from
   [scripts/ui/button_theme_factory.gd](../../scripts/ui/button_theme_factory.gd), which applies the
-  frame/corner UI art and `#bd5f31` interior fill through the Castle HUD theme. Frame borders use
-  tiled repetition (not stretch), corner gems protrude slightly past the button bounds, and the HUD
-  forces nearest filtering to preserve crisp pixel edges.
+  frame/corner UI art, repo-local Pixelify Sans font, and `#bd5f31` interior fill through the Castle
+  HUD theme. Frame borders use tiled repetition (not stretch), corner gems protrude slightly past the
+  button bounds, and the HUD forces nearest filtering to preserve crisp pixel edges.
 
 ## Files
 
@@ -68,6 +68,11 @@ alongside code changes so it stays a reliable reference. See
 - Project display now uses canonical cross-platform stretch settings
   (`window/stretch/mode="canvas_items"` + `window/stretch/aspect="expand"`), preserving the
   authored 1280x720 layout baseline while allowing extra vertical room on taller viewports.
+- Project GUI defaults use [assets/fonts/PixelifySans.ttf](../../assets/fonts/PixelifySans.ttf) as the
+  committed pixel-friendly UI font, with antialiasing, hinting, and subpixel positioning disabled for
+  crisper rasterization. The font is licensed under SIL OFL; keep
+  [assets/fonts/PixelifySans.OFL.txt](../../assets/fonts/PixelifySans.OFL.txt) with it if replacing or
+  redistributing the asset.
 - Project export presets are now committed in `export_presets.cfg` for:
   - **Windows Desktop** (`build/windows/td-m3-game.exe`)
   - **Linux/X11** (`build/linux/td-m3-game.x86_64`)
@@ -80,7 +85,9 @@ alongside code changes so it stays a reliable reference. See
   Godot gains Web support for Mobile/Forward+ renderers.
 - `.github/workflows/godot-web-build.yml` builds the **Web** preset with `barichello/godot-ci:4.7.2`
   on every push to `main`, uploads the generated browser bundle as a workflow artifact, and deploys
-  `build/web` to the `gh-pages` branch for GitHub Pages hosting.
+  `build/web` to the `gh-pages` branch for GitHub Pages hosting. The workflow installs Linux fontconfig
+  support before running Godot, copies export templates from the godot-ci image when available, then
+  downloads the official Godot export templates if the single-thread Web templates are missing.
 - The shared `TopResourceBar` spans the top edge of the screen. Castle uses the `castle` context by
   default and switches to the `smith` context when Smelter/Weapon Smith/Armour Smith are focused to
   prioritize refined-material visibility. The bar now shows a scene context tag and emphasizes

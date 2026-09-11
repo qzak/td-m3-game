@@ -31,13 +31,36 @@ jobs:
         with:
           lfs: true
 
+      - name: Install export dependencies
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y ca-certificates curl fontconfig unzip
+
       - name: Setup Godot export templates
         run: |
-          mkdir -v -p ~/.local/share/godot/export_templates/
-          mv /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          set -euo pipefail
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          IMAGE_TEMPLATE_DIR="/root/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+
+          mkdir -v -p "$TEMPLATE_DIR"
+          if [ -d "$IMAGE_TEMPLATE_DIR" ]; then
+            cp -R "$IMAGE_TEMPLATE_DIR/." "$TEMPLATE_DIR/"
+          fi
+
+          if [ ! -f "$TEMPLATE_DIR/web_nothreads_release.zip" ] || [ ! -f "$TEMPLATE_DIR/web_nothreads_debug.zip" ]; then
+            curl -L -o /tmp/godot_export_templates.tpz "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+            unzip -q /tmp/godot_export_templates.tpz -d /tmp/godot_export_templates
+            cp -R /tmp/godot_export_templates/templates/. "$TEMPLATE_DIR/"
+          fi
+
+          test -f "$TEMPLATE_DIR/web_nothreads_release.zip"
+          test -f "$TEMPLATE_DIR/web_nothreads_debug.zip"
+          ls -1 "$TEMPLATE_DIR" | sort
 
       - name: Export Web
         run: |
+          set -euo pipefail
           mkdir -v -p build/web
           EXPORT_DIR="$(readlink -f build)"
           cd "$PROJECT_PATH"
