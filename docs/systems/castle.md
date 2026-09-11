@@ -73,10 +73,13 @@ alongside code changes so it stays a reliable reference. See
   - **Linux/X11** (`build/linux/td-m3-game.x86_64`)
   - **Android** (`build/android/td-m3-game.apk`) with placeholder custom-template + keystore fields
   - **iOS** (`build/ios`) with placeholder team/profile signing fields
-- `project.godot` keeps `renderer/rendering_method="mobile"` for all targets. This project is
-  currently 2D/UI-heavy, so mobile renderer compatibility on desktop is acceptable and keeps one
-  consistent render path across PC + mobile unless a future feature requires desktop-only renderer
-  features.
+  - **Web** (`build/web/index.html`) for browser exports.
+- `project.godot` keeps `renderer/rendering_method="mobile"` for native targets and sets
+  `renderer/rendering_method.web="gl_compatibility"` for browser export. This project is
+  currently 2D/UI-heavy, so the web Compatibility renderer should remain the browser target unless
+  Godot gains Web support for Mobile/Forward+ renderers.
+- `.github/workflows/godot-web-build.yml` builds the **Web** preset with `barichello/godot-ci:4.7.2`
+  on every push to `main` and uploads the generated browser bundle as a workflow artifact.
 - The shared `TopResourceBar` spans the top edge of the screen. Castle uses the `castle` context by
   default and switches to the `smith` context when Smelter/Weapon Smith/Armour Smith are focused to
   prioritize refined-material visibility. The bar now shows a scene context tag and emphasizes
