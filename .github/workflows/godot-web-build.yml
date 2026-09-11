@@ -61,6 +61,17 @@ jobs:
           test -f "$TEMPLATE_DIR/web_nothreads_debug.zip"
           ls -1 "$TEMPLATE_DIR" | sort
 
+      - name: Show Web export preset
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_PATH"
+          awk '
+            /^\[preset\.[0-9]+\]$/ { in_preset=1; block=$0 ORS; found=0; next }
+            in_preset { block = block $0 ORS }
+            in_preset && /^name="Web"$/ { found=1 }
+            in_preset && /^\[preset\.[0-9]+\.options\]$/ && found { print block; exit }
+          ' export_presets.cfg
+
       - name: Import Godot assets
         run: |
           set -euo pipefail

@@ -88,8 +88,9 @@ alongside code changes so it stays a reliable reference. See
   `build/web` to the `gh-pages` branch for GitHub Pages hosting. The workflow installs Linux fontconfig
   support before running Godot, uses Bash for strict shell handling, copies export templates from the
   godot-ci image when available, downloads the official Godot export templates if the single-thread Web
-  templates are missing, then runs `godot --headless --import --quit` so fresh CI checkouts generate
-  `.godot/imported/*` resources before export.
+  templates are missing, prints the committed **Web** preset for log clarity, then runs
+  `godot --headless --import --quit` so fresh CI checkouts generate `.godot/imported/*` resources before
+  exporting the committed `Web` preset.
 - The shared `TopResourceBar` spans the top edge of the screen. Castle uses the `castle` context by
   default and switches to the `smith` context when Smelter/Weapon Smith/Armour Smith are focused to
   prioritize refined-material visibility. The bar now shows a scene context tag and emphasizes
